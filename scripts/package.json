@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "e2e": "node e2e/run.ts",
-    "deploy:rules": "node deploy-rules.ts",
+    "deploy:rules": "node --env-file-if-exists=../.env deploy-rules.ts",
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {

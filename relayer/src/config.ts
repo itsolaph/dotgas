@@ -87,7 +87,7 @@ export function loadConfig(env: Env, argv: string[] = []): Config {
       mode: rulesMode,
       wsUrl: rulesMode === 'on' ? req(env, 'PORTALDOT_WS_URL') : (env.PORTALDOT_WS_URL ?? ''),
       address: rulesMode === 'on' ? req(env, 'RULES_ADDRESS') : (env.RULES_ADDRESS ?? ''),
-      metadataPath: env.RULES_METADATA ?? 'contracts/ink/ferry_rules/target/ink/ferry_rules.json',
+      metadataPath: env.RULES_METADATA ?? '../contracts/ink/ferry_rules/artifacts/ferry_rules.json',
       suri: rulesMode === 'on' ? req(env, 'RULES_SURI') : '',
     },
     relayerKey,

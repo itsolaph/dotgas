@@ -2,6 +2,7 @@
 name = "ferry_rules"
 version = "0.1.0"
 edition = "2021"
+authors = ["Ferry contributors"]
 license = "MIT"
 description = "Ferry policy + audit ledger (ink! v5, pallet-contracts on Portaldot)"
 publish = false
@@ -19,6 +20,3 @@ default = ["std"]
 std = ["ink/std"]
 ink-as-dependency = []
 e2e-tests = []
-
-[profile.release]
-overflow-checks = true

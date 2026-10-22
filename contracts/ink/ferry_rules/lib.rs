@@ -192,7 +192,11 @@ mod ferry_rules {
 
             let now = self.env().block_timestamp();
             let today = now / DAY_MS;
-            let spent = if today == self.day { self.spent_today } else { 0 };
+            let spent = if today == self.day {
+                self.spent_today
+            } else {
+                0
+            };
             let spent = spent.checked_add(amount).ok_or(Error::Overflow)?;
             if spent > self.daily_budget {
                 return Err(Error::DailyBudgetExceeded);
@@ -236,7 +240,8 @@ mod ferry_rules {
 
         #[ink(message)]
         pub fn remaining_today(&self) -> Balance {
-            self.daily_budget.saturating_sub(self.spent_on_current_day())
+            self.daily_budget
+                .saturating_sub(self.spent_on_current_day())
         }
 
         #[ink(message)]
@@ -389,6 +394,7 @@ mod ferry_rules {
         fn approve_happy_path_records_ledger() {
             let mut c = setup();
             advance(5);
+            let now = ink::env::block_timestamp::<Env>();
             assert_eq!(c.approve(oid(1), addr(7), 5 * UNIT), Ok(()));
             assert!(c.is_approved(oid(1)));
             assert!(!c.is_approved(oid(2)));
@@ -396,7 +402,7 @@ mod ferry_rules {
             assert_eq!(ap.recipient, addr(7));
             assert_eq!(ap.amount, 5 * UNIT);
             assert_eq!(ap.block, 5);
-            assert_eq!(ap.timestamp, 1_700_000_000_000);
+            assert_eq!(ap.timestamp, now);
             assert_eq!(c.received_by(addr(7)), 5 * UNIT);
             assert_eq!(c.remaining_today(), BUDGET - 5 * UNIT);
             let s = c.stats();
@@ -432,7 +438,10 @@ mod ferry_rules {
         fn zero_amount_and_recipient_rejected() {
             let mut c = setup();
             assert_eq!(c.approve(oid(1), addr(1), 0), Err(Error::ZeroAmount));
-            assert_eq!(c.approve(oid(1), [0u8; 20], UNIT), Err(Error::ZeroRecipient));
+            assert_eq!(
+                c.approve(oid(1), [0u8; 20], UNIT),
+                Err(Error::ZeroRecipient)
+            );
         }
 
         #[ink::test]
@@ -504,7 +513,10 @@ mod ferry_rules {
         #[ink::test]
         fn failed_approval_changes_nothing() {
             let mut c = setup();
-            assert_eq!(c.approve(oid(1), addr(1), 31 * UNIT), Err(Error::RecipientCapExceeded));
+            assert_eq!(
+                c.approve(oid(1), addr(1), 31 * UNIT),
+                Err(Error::RecipientCapExceeded)
+            );
             assert!(!c.is_approved(oid(1)));
             assert_eq!(c.received_by(addr(1)), 0);
             assert_eq!(c.remaining_today(), BUDGET);
@@ -525,7 +537,10 @@ mod ferry_rules {
             test::set_caller::<Env>(a.alice);
             assert_eq!(c.set_limits(10 * UNIT, 5 * UNIT, 0), Ok(()));
             let s = c.stats();
-            assert_eq!((s.daily_budget, s.recipient_cap, s.cooldown_blocks), (10 * UNIT, 5 * UNIT, 0));
+            assert_eq!(
+                (s.daily_budget, s.recipient_cap, s.cooldown_blocks),
+                (10 * UNIT, 5 * UNIT, 0)
+            );
             assert_eq!(c.set_relayer(a.charlie), Ok(()));
             assert_eq!(c.relayer(), a.charlie);
 

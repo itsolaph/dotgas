@@ -1,0 +1,7 @@
+# cargo-contract 5 builds `core` with the `panic_immediate_abort` feature, which newer
+# rustc releases removed. Pin a toolchain that cargo-contract 5 / ink! 5 support.
+[toolchain]
+channel = "1.89.0"
+components = ["rust-src", "rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
