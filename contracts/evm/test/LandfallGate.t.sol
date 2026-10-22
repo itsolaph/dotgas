@@ -67,6 +67,8 @@ contract LandfallGateTest is Test {
         uint256 dstAmount,
         uint64 deadline
     );
+    event Reserved(bytes32 indexed orderId, address indexed relayer, uint64 reservedAt);
+    event Released(bytes32 indexed orderId, address indexed relayer);
     event Claimed(bytes32 indexed orderId, address indexed relayer, bytes32 fillTxRef, uint256 amount);
     event Refunded(bytes32 indexed orderId, address indexed user, uint256 amount);
 
@@ -86,6 +88,11 @@ contract LandfallGateTest is Test {
     function _openEth() internal returns (bytes32) {
         vm.prank(alice);
         return gate.open{value: PRICE_WEI}(portaldotRecipient, 1);
+    }
+
+    function _reserve(bytes32 id) internal {
+        vm.prank(relayer);
+        gate.reserve(id);
     }
 
     function _openUsdc() internal returns (bytes32) {
@@ -145,6 +152,7 @@ contract LandfallGateTest is Test {
 
     function test_claim_eth_paysTreasury() public {
         bytes32 id = _openEth();
+        _reserve(id);
         vm.expectEmit(address(gate));
         emit Claimed(id, relayer, FILL_REF, PRICE_WEI);
         vm.prank(relayer);
@@ -155,12 +163,199 @@ contract LandfallGateTest is Test {
         assertEq(gate.fillTxRefOf(id), FILL_REF);
     }
 
-    function test_claim_atExactDeadline_ok() public {
+    // ------------------------------------------------------------ reservation
+
+    function test_reserve_happyPath() public {
         bytes32 id = _openEth();
-        vm.warp(block.timestamp + TTL);
+        vm.warp(block.timestamp + 10 minutes);
+        vm.expectEmit(address(gate));
+        emit Reserved(id, relayer, uint64(block.timestamp));
+        _reserve(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
+        assertEq(uint8(o.status), uint8(LandfallGate.Status.Reserved));
+        assertEq(o.reservedAt, block.timestamp);
+        assertEq(address(gate).balance, PRICE_WEI); // escrow untouched
+    }
+
+    function test_reserve_defaults() public view {
+        assertEq(gate.reserveSafety(), 2 minutes);
+        assertEq(gate.reserveTimeout(), 24 hours);
+    }
+
+    function test_reserve_atSafetyBoundary_ok() public {
+        bytes32 id = _openEth();
+        vm.warp(block.timestamp + TTL - gate.reserveSafety());
+        _reserve(id);
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Reserved));
+    }
+
+    function test_reserve_afterDeadlineMinusSafety_reverts() public {
+        bytes32 id = _openEth();
+        vm.warp(block.timestamp + TTL - gate.reserveSafety() + 1);
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        gate.reserve(id);
+        vm.warp(block.timestamp + 1 hours); // past the deadline as well
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        gate.reserve(id);
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Open));
+    }
+
+    function test_reserve_respectsConfiguredSafety() public {
+        vm.prank(owner);
+        gate.setReserveSafety(10 minutes);
+        bytes32 id = _openEth();
+        vm.warp(block.timestamp + TTL - 10 minutes + 1);
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        gate.reserve(id);
+        vm.warp(block.timestamp - 1);
+        _reserve(id);
+    }
+
+    function test_noDoubleReserve() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        gate.reserve(id);
+    }
+
+    function test_reserve_unknownOrClosedOrder_reverts() public {
+        bytes32 unknown = keccak256("nope");
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, unknown));
+        gate.reserve(unknown);
+
+        bytes32 id = _openEth();
+        vm.warp(block.timestamp + TTL + 1);
+        gate.refund(id);
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        gate.reserve(id);
+    }
+
+    function test_reserve_onlyRelayer() public {
+        bytes32 id = _openEth();
+        vm.prank(alice);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        gate.reserve(id);
+        vm.prank(owner);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        gate.reserve(id);
+    }
+
+    function test_cannotRefundReserved_beforeTimeout() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        uint256 reservedAt = block.timestamp;
+        vm.warp(block.timestamp + TTL + 1); // original deadline passed
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        gate.refund(id);
+        vm.warp(reservedAt + 24 hours); // exactly at the timeout: still blocked
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        gate.refund(id);
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Reserved));
+    }
+
+    function test_canRefundReserved_afterTimeout() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        uint256 before = alice.balance;
+        vm.warp(block.timestamp + 24 hours + 1);
+        vm.expectEmit(address(gate));
+        emit Refunded(id, alice, PRICE_WEI);
+        vm.prank(bob); // anyone may trigger
+        gate.refund(id);
+        assertEq(alice.balance, before + PRICE_WEI);
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
+        // the relayer can no longer claim
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        gate.claim(id, FILL_REF);
+    }
+
+    function test_refundReserved_usesConfiguredTimeout() public {
+        vm.prank(owner);
+        gate.setReserveTimeout(2 hours);
+        bytes32 id = _openEth();
+        _reserve(id);
+        vm.warp(block.timestamp + 2 hours);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        gate.refund(id);
+        vm.warp(block.timestamp + 1);
+        gate.refund(id);
+    }
+
+    function test_claimReserved_afterOriginalDeadline() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        vm.warp(block.timestamp + TTL + 1 hours);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
         assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Filled));
+        assertEq(treasury.balance, PRICE_WEI);
+    }
+
+    function test_claimReserved_afterTimeout_ifNotRefunded() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        vm.warp(block.timestamp + 24 hours + 1);
+        vm.prank(relayer);
+        gate.claim(id, FILL_REF);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        gate.refund(id);
+    }
+
+    function test_release_returnsOrderToOpen() public {
+        bytes32 id = _openEth();
+        _reserve(id);
+        vm.expectEmit(address(gate));
+        emit Released(id, relayer);
+        vm.prank(relayer);
+        gate.release(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
+        assertEq(uint8(o.status), uint8(LandfallGate.Status.Open));
+        assertEq(o.reservedAt, 0);
+        // back to the normal deadline refund, no reservation timeout
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        gate.claim(id, FILL_REF);
+        vm.warp(block.timestamp + TTL + 1);
+        gate.refund(id);
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
+    }
+
+    function test_release_onlyRelayer_andOnlyReserved() public {
+        bytes32 id = _openEth();
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        gate.release(id);
+        _reserve(id);
+        vm.prank(alice);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        gate.release(id);
+        vm.prank(owner);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        gate.release(id);
+    }
+
+    function test_reserveConfig_setters() public {
+        vm.startPrank(owner);
+        gate.setReserveSafety(0);
+        assertEq(gate.reserveSafety(), 0);
+        gate.setReserveSafety(1 days);
+        vm.expectRevert(LandfallGate.BadReserveSafety.selector);
+        gate.setReserveSafety(1 days + 1);
+        gate.setReserveTimeout(1 hours);
+        gate.setReserveTimeout(30 days);
+        assertEq(gate.reserveTimeout(), 30 days);
+        vm.expectRevert(LandfallGate.BadReserveTimeout.selector);
+        gate.setReserveTimeout(1 hours - 1);
+        vm.expectRevert(LandfallGate.BadReserveTimeout.selector);
+        gate.setReserveTimeout(30 days + 1);
+        vm.stopPrank();
     }
 
     function test_orderIdsAreUnique() public {
@@ -207,7 +402,7 @@ contract LandfallGateTest is Test {
     function test_tierChange_doesNotAffectOpenOrder() public {
         bytes32 id = _openEth();
         vm.prank(owner);
-        gate.setTier(1, 1 ether, 1, 1, true);
+        gate.setTier(1, 1 ether, 1, 1e4, true);
         LandfallGate.Order memory o = gate.getOrder(id);
         assertEq(o.amount, PRICE_WEI);
         assertEq(o.dstAmount, DST);
@@ -234,19 +429,23 @@ contract LandfallGateTest is Test {
         gate.refund(id);
     }
 
-    function test_claim_afterDeadline_reverts() public {
+    function test_noClaimFromOpen() public {
         bytes32 id = _openEth();
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        gate.claim(id, FILL_REF);
         vm.warp(block.timestamp + TTL + 1);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.DeadlinePassed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
     function test_noDoubleClaim() public {
         bytes32 id = _openEth();
+        _reserve(id);
         vm.startPrank(relayer);
         gate.claim(id, FILL_REF);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
         vm.stopPrank();
     }
@@ -261,9 +460,10 @@ contract LandfallGateTest is Test {
 
     function test_noRefundAfterClaim() public {
         bytes32 id = _openEth();
+        _reserve(id);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
-        vm.warp(block.timestamp + TTL + 1);
+        vm.warp(block.timestamp + 30 days);
         vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.refund(id);
     }
@@ -273,7 +473,7 @@ contract LandfallGateTest is Test {
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -282,7 +482,7 @@ contract LandfallGateTest is Test {
         vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -317,6 +517,7 @@ contract LandfallGateTest is Test {
         assertEq(o.amount, PRICE_USDC);
         assertEq(usdc.balanceOf(address(gate)), PRICE_USDC);
 
+        _reserve(id);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
         assertEq(usdc.balanceOf(treasury), PRICE_USDC);
@@ -384,6 +585,7 @@ contract LandfallGateTest is Test {
     function test_pause_blocksOpen_butNotSettlement() public {
         bytes32 a = _openEth();
         bytes32 b = _openEth();
+        bytes32 c = _openEth();
         vm.prank(owner);
         gate.pause();
 
@@ -397,10 +599,15 @@ contract LandfallGateTest is Test {
         gate.openUSDC(portaldotRecipient, 1);
         vm.stopPrank();
 
+        _reserve(a);
         vm.prank(relayer);
         gate.claim(a, FILL_REF);
+        _reserve(c);
+        vm.prank(relayer);
+        gate.release(c);
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(b);
+        gate.refund(c);
 
         vm.prank(owner);
         gate.unpause();
@@ -411,6 +618,7 @@ contract LandfallGateTest is Test {
 
     function test_claim_onlyRelayer() public {
         bytes32 id = _openEth();
+        _reserve(id);
         vm.prank(alice);
         vm.expectRevert(LandfallGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
@@ -433,6 +641,10 @@ contract LandfallGateTest is Test {
         vm.expectRevert(err);
         gate.setOrderTtl(1 hours);
         vm.expectRevert(err);
+        gate.setReserveSafety(1 minutes);
+        vm.expectRevert(err);
+        gate.setReserveTimeout(2 hours);
+        vm.expectRevert(err);
         gate.pause();
         vm.expectRevert(err);
         gate.unpause();
@@ -441,6 +653,7 @@ contract LandfallGateTest is Test {
 
     function test_rotateRelayer() public {
         bytes32 id = _openEth();
+        _reserve(id); // a reservation by the old relayer can be claimed by the new one
         address newRelayer = makeAddr("newRelayer");
         vm.prank(owner);
         gate.setRelayer(newRelayer);
@@ -467,6 +680,31 @@ contract LandfallGateTest is Test {
         gate.setOrderTtl(1);
     }
 
+    function test_setTier_dstMustConvertTo14Decimals() public {
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, 5 ether + 1));
+        gate.setTier(5, PRICE_WEI, PRICE_USDC, 5 ether + 1, true);
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, 9_999));
+        gate.setTier(5, PRICE_WEI, PRICE_USDC, 9_999, true);
+        gate.setTier(5, PRICE_WEI, PRICE_USDC, 1e4, true);
+        gate.setTier(6, PRICE_WEI, PRICE_USDC, 0, false); // zero (disabled) is a multiple too
+        vm.stopPrank();
+        (,, uint256 dst,) = gate.tiers(5);
+        assertEq(dst, 1e4);
+    }
+
+    function testFuzz_setTier_dstDivisibility(uint256 dst) public {
+        vm.prank(owner);
+        if (dst % 1e4 != 0) {
+            vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, dst));
+            gate.setTier(7, PRICE_WEI, 0, dst, true);
+        } else {
+            gate.setTier(7, PRICE_WEI, 0, dst, true);
+            (,, uint256 stored,) = gate.tiers(7);
+            assertEq(stored % 1e4, 0);
+        }
+    }
+
     function test_ownershipTransfer_isTwoStep() public {
         vm.prank(owner);
         gate.transferOwnership(bob);
@@ -483,8 +721,9 @@ contract LandfallGateTest is Test {
     {
         vm.assume(recipient != address(0));
         vm.assume(price > 0 && dst > 0);
+        uint256 dstWei = uint256(dst) * 1e4;
         vm.prank(owner);
-        gate.setTier(tier, price, 0, dst, true);
+        gate.setTier(tier, price, 0, dstWei, true);
         vm.deal(alice, price);
         vm.prank(alice);
         bytes32 id = gate.open{value: price}(recipient, tier);
@@ -492,26 +731,45 @@ contract LandfallGateTest is Test {
         assertEq(o.recipient, recipient);
         assertEq(o.tier, tier);
         assertEq(o.amount, price);
-        assertEq(o.dstAmount, dst);
+        assertEq(o.dstAmount, dstWei);
     }
 
-    /// Claim and refund windows partition time exactly: at any moment exactly one of them is possible.
-    function testFuzz_claimXorRefund(uint64 elapsed) public {
-        elapsed = uint64(bound(elapsed, 0, 30 days));
+    /// Whatever the timing, an order settles exactly once: either the treasury or the user gets the escrow,
+    /// never both. Claim needs a reservation, which needs `reserveSafety` before the deadline; refund of a
+    /// reservation needs the reservation timeout.
+    function testFuzz_settlesExactlyOnce(uint64 reserveAfter, uint64 elapsed, bool tryRefundFirst) public {
+        reserveAfter = uint64(bound(reserveAfter, 0, 2 * TTL));
+        elapsed = uint64(bound(elapsed, 0, 60 days));
         bytes32 id = _openEth();
-        vm.warp(block.timestamp + elapsed);
-        bool canClaim = elapsed <= TTL;
+        uint256 t0 = block.timestamp;
 
+        vm.warp(t0 + reserveAfter);
+        bool canReserve = reserveAfter + gate.reserveSafety() <= TTL;
         vm.prank(relayer);
-        (bool claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
-        assertEq(claimOk, canClaim);
+        (bool reserveOk,) = address(gate).call(abi.encodeCall(LandfallGate.reserve, (id)));
+        assertEq(reserveOk, canReserve);
 
-        (bool refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
-        assertEq(refundOk, !canClaim);
+        vm.warp(t0 + reserveAfter + elapsed);
+        bool refundable = reserveOk ? elapsed > gate.reserveTimeout() : reserveAfter + elapsed > TTL;
 
-        // Funds always end up in exactly one place.
-        assertEq(address(gate).balance, 0);
-        assertEq(treasury.balance + (canClaim ? 0 : PRICE_WEI), PRICE_WEI);
+        bool refundOk;
+        bool claimOk;
+        if (tryRefundFirst) {
+            (refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
+            vm.prank(relayer);
+            (claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
+        } else {
+            vm.prank(relayer);
+            (claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
+            (refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
+        }
+        assertFalse(claimOk && refundOk);
+        assertEq(claimOk, reserveOk && !(tryRefundFirst && refundable));
+        assertEq(refundOk, refundable && !(claimOk && !tryRefundFirst));
+
+        // Funds always end up in at most one place, and nowhere else.
+        uint256 paidOut = treasury.balance + (refundOk ? PRICE_WEI : 0);
+        assertEq(paidOut + address(gate).balance, PRICE_WEI);
     }
 
     function testFuzz_wrongEthAmountReverts(uint256 value) public {

@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x39be6ac30b59d7b08c64d01a0307a45a0bf9412a67552ec4c146453814eb3bad",
+    "hash": "0x73d3fb0105e5ba38f4a18db68130c21fa98e09041df7a56c214472e5b2c015fe",
     "language": "ink! 5.1.1",
     "compiler": "rustc 1.89.0",
     "build_info": {
@@ -75,7 +75,7 @@
             "ink_primitives",
             "ConstructorResult"
           ],
-          "type": 21
+          "type": 22
         },
         "selector": "0x9bae9d5e"
       }
@@ -104,13 +104,13 @@
         "displayName": [
           "ChainExtension"
         ],
-        "type": 34
+        "type": 36
       },
       "hash": {
         "displayName": [
           "Hash"
         ],
-        "type": 33
+        "type": 35
       },
       "maxEventTopics": 4,
       "staticBufferSize": 16384,
@@ -258,6 +258,25 @@
           {
             "docs": [],
             "indexed": true,
+            "label": "pending_owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 0
+            }
+          }
+        ],
+        "docs": [],
+        "label": "OwnershipTransferStarted",
+        "module_path": "landfall_rules::landfall_rules",
+        "signature_topic": "0xe966fde0f0dcef052bfe921b539ec394c2d095550ad0edf8cf82292552638502"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
             "label": "new_owner",
             "type": {
               "displayName": [
@@ -278,7 +297,7 @@
         "ink",
         "LangError"
       ],
-      "type": 22
+      "type": 23
     },
     "messages": [
       {
@@ -324,7 +343,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 24
         },
         "selector": "0x681266a0"
       },
@@ -350,7 +369,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 26
+          "type": 27
         },
         "selector": "0x6642e333"
       },
@@ -376,7 +395,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 27
+          "type": 28
         },
         "selector": "0x005620f9"
       },
@@ -392,7 +411,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 29
+          "type": 30
         },
         "selector": "0xf13c566d"
       },
@@ -418,7 +437,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 29
+          "type": 30
         },
         "selector": "0x613628bf"
       },
@@ -434,7 +453,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 30
+          "type": 31
         },
         "selector": "0x377c5444"
       },
@@ -450,9 +469,25 @@
             "ink",
             "MessageResult"
           ],
-          "type": 32
+          "type": 33
         },
         "selector": "0xfeaea4fa"
+      },
+      {
+        "args": [],
+        "default": false,
+        "docs": [],
+        "label": "pending_owner",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x6e429d8d"
       },
       {
         "args": [],
@@ -466,7 +501,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 32
+          "type": 33
         },
         "selector": "0x36bcd880"
       },
@@ -492,7 +527,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 24
         },
         "selector": "0xcf3fcd90"
       },
@@ -536,7 +571,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 24
         },
         "selector": "0x1f116f2b"
       },
@@ -562,7 +597,7 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 24
         },
         "selector": "0x4b7659e5"
       },
@@ -579,7 +614,10 @@
           }
         ],
         "default": false,
-        "docs": [],
+        "docs": [
+          " Step 1 of 2: nominate `new_owner`. Ownership only moves once the nominee calls",
+          " `accept_ownership`, so a typo cannot lock the contract. A new nomination replaces the old one."
+        ],
         "label": "transfer_ownership",
         "mutates": true,
         "payable": false,
@@ -588,9 +626,27 @@
             "ink",
             "MessageResult"
           ],
-          "type": 23
+          "type": 24
         },
         "selector": "0x107e33ea"
+      },
+      {
+        "args": [],
+        "default": false,
+        "docs": [
+          " Step 2 of 2: the nominated account takes ownership."
+        ],
+        "label": "accept_ownership",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 24
+        },
+        "selector": "0xb55be9f0"
       }
     ]
   },
@@ -607,6 +663,35 @@
                 }
               },
               "name": "owner"
+            },
+            {
+              "layout": {
+                "enum": {
+                  "dispatchKey": "0x00000000",
+                  "name": "Option",
+                  "variants": {
+                    "0": {
+                      "fields": [],
+                      "name": "None"
+                    },
+                    "1": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x00000000",
+                              "ty": 0
+                            }
+                          },
+                          "name": "0"
+                        }
+                      ],
+                      "name": "Some"
+                    }
+                  }
+                }
+              },
+              "name": "pending_owner"
             },
             {
               "layout": {
@@ -1147,6 +1232,11 @@
                 "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1512706915u32, ()>,>>::Type"
               },
               {
+                "name": "pending_owner",
+                "type": 21,
+                "typeName": "<Option<AccountId> as::ink::storage::traits::AutoStorableHint<::\nink::storage::traits::ManualKey<1696828033u32, ()>,>>::Type"
+              },
+              {
                 "name": "relayer",
                 "type": 0,
                 "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1421171550u32, ()>,>>::Type"
@@ -1223,6 +1313,39 @@
           "variant": {
             "variants": [
               {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 0
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 0
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
                 "fields": [
                   {
                     "type": 13
@@ -1234,7 +1357,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1250,7 +1373,7 @@
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1259,7 +1382,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "type": {
         "def": {
           "variant": {
@@ -1278,7 +1401,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 24,
       "type": {
         "def": {
           "variant": {
@@ -1286,7 +1409,7 @@
               {
                 "fields": [
                   {
-                    "type": 24
+                    "type": 25
                   }
                 ],
                 "index": 0,
@@ -1295,7 +1418,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1307,11 +1430,11 @@
         "params": [
           {
             "name": "T",
-            "type": 24
+            "type": 25
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1320,7 +1443,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "type": {
         "def": {
           "variant": {
@@ -1337,7 +1460,7 @@
               {
                 "fields": [
                   {
-                    "type": 25
+                    "type": 26
                   }
                 ],
                 "index": 1,
@@ -1353,7 +1476,7 @@
           },
           {
             "name": "E",
-            "type": 25
+            "type": 26
           }
         ],
         "path": [
@@ -1362,7 +1485,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "type": {
         "def": {
           "variant": {
@@ -1406,6 +1529,14 @@
               {
                 "index": 9,
                 "name": "Overflow"
+              },
+              {
+                "index": 10,
+                "name": "ZeroAccount"
+              },
+              {
+                "index": 11,
+                "name": "NotPendingOwner"
               }
             ]
           }
@@ -1418,7 +1549,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 27,
       "type": {
         "def": {
           "variant": {
@@ -1435,7 +1566,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1451,7 +1582,7 @@
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1460,7 +1591,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "type": {
         "def": {
           "variant": {
@@ -1468,7 +1599,7 @@
               {
                 "fields": [
                   {
-                    "type": 28
+                    "type": 29
                   }
                 ],
                 "index": 0,
@@ -1477,7 +1608,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1489,11 +1620,11 @@
         "params": [
           {
             "name": "T",
-            "type": 28
+            "type": 29
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1502,7 +1633,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "type": {
         "def": {
           "variant": {
@@ -1535,7 +1666,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "type": {
         "def": {
           "variant": {
@@ -1552,7 +1683,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1568,7 +1699,7 @@
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1577,7 +1708,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 31,
       "type": {
         "def": {
           "variant": {
@@ -1585,7 +1716,7 @@
               {
                 "fields": [
                   {
-                    "type": 31
+                    "type": 32
                   }
                 ],
                 "index": 0,
@@ -1594,7 +1725,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1606,11 +1737,11 @@
         "params": [
           {
             "name": "T",
-            "type": 31
+            "type": 32
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1619,7 +1750,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "type": {
         "def": {
           "composite": {
@@ -1680,7 +1811,7 @@
       }
     },
     {
-      "id": 32,
+      "id": 33,
       "type": {
         "def": {
           "variant": {
@@ -1697,7 +1828,7 @@
               {
                 "fields": [
                   {
-                    "type": 22
+                    "type": 23
                   }
                 ],
                 "index": 1,
@@ -1713,7 +1844,7 @@
           },
           {
             "name": "E",
-            "type": 22
+            "type": 23
           }
         ],
         "path": [
@@ -1722,7 +1853,49 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 21
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 23
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 21
+          },
+          {
+            "name": "E",
+            "type": 23
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 35,
       "type": {
         "def": {
           "composite": {
@@ -1742,7 +1915,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 36,
       "type": {
         "def": {
           "variant": {}

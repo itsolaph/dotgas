@@ -19,6 +19,9 @@ contract LandfallDock is Ownable2Step, Pausable, ReentrancyGuard {
     uint256 public fillCount;
 
     mapping(bytes32 => bool) public filled;
+    /// @notice Block number of the fill, 0 if not filled. Lets off-chain readers find the `Filled` event in
+    ///         a one-block range instead of scanning from the deploy block.
+    mapping(bytes32 => uint256) public filledAt;
     mapping(address => uint256) public receivedBy;
 
     event Funded(address indexed from, uint256 amount);
@@ -72,6 +75,7 @@ contract LandfallDock is Ownable2Step, Pausable, ReentrancyGuard {
         if (amount > address(this).balance) revert InsufficientPool(amount, address(this).balance);
 
         filled[orderId] = true;
+        filledAt[orderId] = block.number;
         receivedBy[recipient] = after_;
         totalFilled += amount;
         fillCount += 1;

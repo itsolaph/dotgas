@@ -41,6 +41,8 @@ mod landfall_rules {
         RecipientCapExceeded,
         CooldownActive,
         Overflow,
+        ZeroAccount,
+        NotPendingOwner,
     }
 
     pub type Result<T> = core::result::Result<T, Error>;
@@ -98,6 +100,12 @@ mod landfall_rules {
     }
 
     #[ink(event)]
+    pub struct OwnershipTransferStarted {
+        #[ink(topic)]
+        pending_owner: AccountId,
+    }
+
+    #[ink(event)]
     pub struct OwnershipTransferred {
         #[ink(topic)]
         new_owner: AccountId,
@@ -106,6 +114,7 @@ mod landfall_rules {
     #[ink(storage)]
     pub struct LandfallRules {
         owner: AccountId,
+        pending_owner: Option<AccountId>,
         relayer: AccountId,
         paused: bool,
         daily_budget: Balance,
@@ -131,6 +140,7 @@ mod landfall_rules {
         ) -> Self {
             Self {
                 owner: Self::env().caller(),
+                pending_owner: None,
                 relayer,
                 paused: false,
                 daily_budget,
@@ -270,6 +280,11 @@ mod landfall_rules {
         }
 
         #[ink(message)]
+        pub fn pending_owner(&self) -> Option<AccountId> {
+            self.pending_owner
+        }
+
+        #[ink(message)]
         pub fn relayer(&self) -> AccountId {
             self.relayer
         }
@@ -279,6 +294,7 @@ mod landfall_rules {
         #[ink(message)]
         pub fn set_relayer(&mut self, relayer: AccountId) -> Result<()> {
             self.ensure_owner()?;
+            Self::ensure_nonzero(&relayer)?;
             self.relayer = relayer;
             self.env().emit_event(RelayerUpdated { relayer });
             Ok(())
@@ -311,11 +327,29 @@ mod landfall_rules {
             Ok(())
         }
 
+        /// Step 1 of 2: nominate `new_owner`. Ownership only moves once the nominee calls
+        /// `accept_ownership`, so a typo cannot lock the contract. A new nomination replaces the old one.
         #[ink(message)]
         pub fn transfer_ownership(&mut self, new_owner: AccountId) -> Result<()> {
             self.ensure_owner()?;
-            self.owner = new_owner;
-            self.env().emit_event(OwnershipTransferred { new_owner });
+            Self::ensure_nonzero(&new_owner)?;
+            self.pending_owner = Some(new_owner);
+            self.env().emit_event(OwnershipTransferStarted {
+                pending_owner: new_owner,
+            });
+            Ok(())
+        }
+
+        /// Step 2 of 2: the nominated account takes ownership.
+        #[ink(message)]
+        pub fn accept_ownership(&mut self) -> Result<()> {
+            let caller = self.env().caller();
+            if self.pending_owner != Some(caller) {
+                return Err(Error::NotPendingOwner);
+            }
+            self.owner = caller;
+            self.pending_owner = None;
+            self.env().emit_event(OwnershipTransferred { new_owner: caller });
             Ok(())
         }
 
@@ -324,6 +358,13 @@ mod landfall_rules {
         fn ensure_owner(&self) -> Result<()> {
             if self.env().caller() != self.owner {
                 return Err(Error::NotOwner);
+            }
+            Ok(())
+        }
+
+        fn ensure_nonzero(account: &AccountId) -> Result<()> {
+            if *account == AccountId::from([0u8; 32]) {
+                return Err(Error::ZeroAccount);
             }
             Ok(())
         }
@@ -554,8 +595,60 @@ mod landfall_rules {
 
             test::set_caller::<Env>(a.alice);
             assert_eq!(c.transfer_ownership(a.django), Ok(()));
+            test::set_caller::<Env>(a.django);
+            assert_eq!(c.accept_ownership(), Ok(()));
             assert_eq!(c.owner(), a.django);
+            test::set_caller::<Env>(a.alice);
             assert_eq!(c.set_paused(true), Err(Error::NotOwner));
+        }
+
+        #[ink::test]
+        fn zero_account_rejected() {
+            let mut c = setup();
+            let a = accounts();
+            let zero = AccountId::from([0u8; 32]);
+            test::set_caller::<Env>(a.alice);
+            assert_eq!(c.set_relayer(zero), Err(Error::ZeroAccount));
+            assert_eq!(c.relayer(), a.bob);
+            assert_eq!(c.transfer_ownership(zero), Err(Error::ZeroAccount));
+            assert_eq!(c.pending_owner(), None);
+            assert_eq!(c.owner(), a.alice);
+        }
+
+        #[ink::test]
+        fn ownership_transfer_is_two_step() {
+            let mut c = setup();
+            let a = accounts();
+            test::set_caller::<Env>(a.alice);
+            assert_eq!(c.transfer_ownership(a.charlie), Ok(()));
+            // nothing changes until the nominee accepts
+            assert_eq!(c.owner(), a.alice);
+            assert_eq!(c.pending_owner(), Some(a.charlie));
+            assert_eq!(c.set_paused(true), Ok(()));
+
+            // only the nominee can accept: not the owner, not anyone else
+            assert_eq!(c.accept_ownership(), Err(Error::NotPendingOwner));
+            test::set_caller::<Env>(a.django);
+            assert_eq!(c.accept_ownership(), Err(Error::NotPendingOwner));
+            test::set_caller::<Env>(a.charlie);
+            assert_eq!(c.set_paused(false), Err(Error::NotOwner));
+
+            // the owner may re-nominate; the earlier nominee loses the right to accept
+            test::set_caller::<Env>(a.alice);
+            assert_eq!(c.transfer_ownership(a.django), Ok(()));
+            test::set_caller::<Env>(a.charlie);
+            assert_eq!(c.accept_ownership(), Err(Error::NotPendingOwner));
+
+            test::set_caller::<Env>(a.django);
+            assert_eq!(c.accept_ownership(), Ok(()));
+            assert_eq!(c.owner(), a.django);
+            assert_eq!(c.pending_owner(), None);
+            assert_eq!(c.set_paused(false), Ok(()));
+            test::set_caller::<Env>(a.alice);
+            assert_eq!(c.set_paused(true), Err(Error::NotOwner));
+            // a second accept is not possible
+            test::set_caller::<Env>(a.django);
+            assert_eq!(c.accept_ownership(), Err(Error::NotPendingOwner));
         }
 
         #[ink::test]

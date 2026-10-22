@@ -12,6 +12,8 @@ import {LandfallGate} from "../src/LandfallGate.sol";
 ///   TREASURY_ADDRESS      default: deployer
 ///   PAYMENT_TOKEN         default: Circle test USDC on Base Sepolia (set to 0x0 to disable token payments)
 ///   ORDER_TTL             seconds, default 1800
+///   RESERVE_SAFETY        seconds that must remain before the deadline to reserve, default: contract default (120)
+///   RESERVE_TIMEOUT       seconds a reservation blocks the refund, default: contract default (86400)
 ///   TIER{1,2,3}_PRICE_WEI / TIER{1,2,3}_PRICE_TOKEN / TIER{1,2,3}_DST  optional tier overrides
 contract DeployGate is Script {
     address constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
@@ -30,9 +32,15 @@ contract DeployGate is Script {
         _tier(gate, 1, 0.0002 ether, 500_000, 2 ether); // "Starter": 0.5 USDC -> 2 tPOT
         _tier(gate, 2, 0.0005 ether, 1_000_000, 5 ether); // "Explorer": 1 USDC -> 5 tPOT
         _tier(gate, 3, 0.001 ether, 2_000_000, 12 ether); // "Builder": 2 USDC -> 12 tPOT
+        uint256 safety = vm.envOr("RESERVE_SAFETY", uint256(type(uint256).max));
+        if (safety != type(uint256).max) gate.setReserveSafety(uint64(safety));
+        uint256 timeout = vm.envOr("RESERVE_TIMEOUT", uint256(0));
+        if (timeout != 0) gate.setReserveTimeout(uint64(timeout));
         vm.stopBroadcast();
 
         console2.log("LandfallGate", address(gate));
+        // The relayer needs this as GATE_DEPLOY_BLOCK to rebuild its order set from events.
+        console2.log("GATE_DEPLOY_BLOCK", block.number);
         _writeDeployment(address(gate), relayer, treasury, token);
     }
 

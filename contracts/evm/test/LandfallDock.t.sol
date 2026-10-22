@@ -77,6 +77,15 @@ contract LandfallDockTest is Test {
         assertEq(dock.poolBalance(), 95 ether);
     }
 
+    function test_fill_recordsBlockNumber() public {
+        bytes32 id = keccak256("order-1");
+        assertEq(dock.filledAt(id), 0);
+        vm.roll(1234);
+        _fill(id, alice, 1 ether);
+        assertEq(dock.filledAt(id), 1234);
+        assertEq(dock.filledAt(keccak256("other")), 0);
+    }
+
     function test_fill_replay_reverts() public {
         bytes32 id = keccak256("order-1");
         _fill(id, alice, 1 ether);

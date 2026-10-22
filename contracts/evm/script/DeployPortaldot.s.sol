@@ -35,6 +35,7 @@ contract DeployPortaldot is Script {
 
         console2.log("LandfallDock", address(dock));
         console2.log("FirstSteps", address(book));
+        console2.log("DOCK_DEPLOY_BLOCK", block.number);
 
         string memory k = "portaldot";
         vm.serializeUint(k, "chainId", block.chainid);
