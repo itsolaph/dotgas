@@ -16,7 +16,7 @@ interface Tier {
 }
 
 const TIER_NAMES: Record<number, string> = { 1: 'Starter', 2: 'Explorer', 3: 'Builder' };
-const STORAGE_KEY = 'ferry:lastOrder';
+const STORAGE_KEY = 'landfall:lastOrder';
 
 const fmt = (v: bigint | null, decimals = 18, digits = 4) =>
   v === null ? '—' : Number(formatUnits(v, decimals)).toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -47,7 +47,7 @@ export function App() {
     }
   }, []);
 
-  // Tiers are owner-set on FerryGate; read them from chain.
+  // Tiers are owner-set on LandfallGate; read them from chain.
   useEffect(() => {
     if (!isConfigured) return;
     (async () => {
@@ -208,7 +208,7 @@ export function App() {
     <main>
       <header>
         <div>
-          <h1>⛴ Ferry</h1>
+          <h1>⛴ Landfall</h1>
           <p className="muted">Pay on Base Sepolia, get tPOT gas on Portaldot. Your first Portaldot transaction just works.</p>
         </div>
         {account ? (
@@ -242,7 +242,7 @@ export function App() {
       <section className="card">
         <h2>1 · Pick your gas tier</h2>
         <div className="tiers">
-          {tiers.length === 0 && <p className="muted">No active tiers found on FerryGate.</p>}
+          {tiers.length === 0 && <p className="muted">No active tiers found on LandfallGate.</p>}
           {tiers.map((t) => (
             <button key={t.id} className={`tier ${t.id === tierId ? 'selected' : ''}`} onClick={() => setTierId(t.id)}>
               <div className="tier-name">{TIER_NAMES[t.id] ?? `Tier ${t.id}`}</div>

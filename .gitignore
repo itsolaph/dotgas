@@ -17,7 +17,7 @@ broadcast/
 # runtime state
 *.state.json
 state/
-.ferry-state*
+.landfall-state*
 e2e-logs/
 *.log
 

@@ -36,5 +36,5 @@ export const dockAbi = parseAbi([
   'error EnforcedPause()',
 ]);
 
-/** Mirrors FerryGate.Status */
+/** Mirrors LandfallGate.Status */
 export const GateStatus = { None: 0, Open: 1, Filled: 2, Refunded: 3 } as const;

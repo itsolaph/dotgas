@@ -1,8 +1,8 @@
-# Ferry: top-level tasks. Targets run sequentially on purpose (cargo builds are heavy).
+# Landfall: top-level tasks. Targets run sequentially on purpose (cargo builds are heavy).
 .PHONY: all deps build build-evm build-ink build-web test test-evm test-ink test-relayer test-e2e typecheck \
         deploy-base deploy-portaldot deploy-rules relayer web clean
 
-INK_DIR := contracts/ink/ferry_rules
+INK_DIR := contracts/ink/landfall_rules
 EVM_DIR := contracts/evm
 
 all: build
@@ -22,14 +22,14 @@ build-evm:
 build-ink:
 	cd $(INK_DIR) && cargo contract build --release
 	mkdir -p $(INK_DIR)/artifacts
-	cp $(INK_DIR)/target/ink/ferry_rules.contract $(INK_DIR)/target/ink/ferry_rules.json $(INK_DIR)/target/ink/ferry_rules.wasm $(INK_DIR)/artifacts/
+	cp $(INK_DIR)/target/ink/landfall_rules.contract $(INK_DIR)/target/ink/landfall_rules.json $(INK_DIR)/target/ink/landfall_rules.wasm $(INK_DIR)/artifacts/
 
 build-web:
 	npm --workspace web run build
 
 # ------------------------------------------------------------------ test
 test: test-evm test-ink test-relayer test-e2e
-	@echo "all Ferry test suites passed"
+	@echo "all Landfall test suites passed"
 
 test-evm:
 	cd $(EVM_DIR) && forge test

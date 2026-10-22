@@ -1,7 +1,7 @@
 {
-  "name": "ferry",
+  "name": "landfall",
   "private": true,
-  "description": "Ferry: gas onboarding into Portaldot (Base Sepolia -> Portaldot tPOT)",
+  "description": "Landfall: gas onboarding into Portaldot (Base Sepolia -> Portaldot tPOT)",
   "license": "MIT",
   "workspaces": [
     "relayer",

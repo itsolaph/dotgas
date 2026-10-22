@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Deploy the ink! `ferry_rules` contract to Portaldot's pallet-contracts (WASM).
+ * Deploy the ink! `landfall_rules` contract to Portaldot's pallet-contracts (WASM).
  *
  * Env (secrets come from the environment only):
  *   PORTALDOT_WS_URL        default wss://test-node-v3.portaldot.dev
@@ -9,7 +9,7 @@
  *   RULES_DAILY_BUDGET      native units (14 decimals), default 1000 tPOT
  *   RULES_RECIPIENT_CAP     native units, default 30 tPOT
  *   RULES_COOLDOWN_BLOCKS   default 10
- *   RULES_CONTRACT_BUNDLE   default ../contracts/ink/ferry_rules/artifacts/ferry_rules.contract
+ *   RULES_CONTRACT_BUNDLE   default ../contracts/ink/landfall_rules/artifacts/landfall_rules.contract
  *
  * Usage: node --env-file-if-exists=../.env deploy-rules.ts [--dry-run]
  */
@@ -33,7 +33,7 @@ function env(k: string, d?: string): string {
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
   const wsUrl = env('PORTALDOT_WS_URL', 'wss://test-node-v3.portaldot.dev');
-  const bundlePath = env('RULES_CONTRACT_BUNDLE', join(here, '../contracts/ink/ferry_rules/artifacts/ferry_rules.contract'));
+  const bundlePath = env('RULES_CONTRACT_BUNDLE', join(here, '../contracts/ink/landfall_rules/artifacts/landfall_rules.contract'));
   const relayer = env('RULES_RELAYER_SS58');
   const budget = BigInt(env('RULES_DAILY_BUDGET', (1000n * UNIT).toString()));
   const cap = BigInt(env('RULES_RECIPIENT_CAP', (30n * UNIT).toString()));
@@ -76,8 +76,8 @@ async function main() {
     }).catch(reject);
   });
 
-  const out = { network: 'portaldot-testnet-v3', ferry_rules: address, blockHash, txHash: tx.hash.toHex(), relayer, budget: budget.toString(), cap: cap.toString(), cooldown };
-  const file = join(here, '../contracts/ink/ferry_rules/deployments/portaldot.json');
+  const out = { network: 'portaldot-testnet-v3', landfall_rules: address, blockHash, txHash: tx.hash.toHex(), relayer, budget: budget.toString(), cap: cap.toString(), cooldown };
+  const file = join(here, '../contracts/ink/landfall_rules/deployments/portaldot.json');
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(out, null, 2) + '\n');
   console.log(JSON.stringify({ step: 'deployed', ...out }));

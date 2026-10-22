@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x28edaaeeedf9a55436063363e4849e8aa96240cf4b2625a8f39eec5d75893815",
+    "hash": "0x39be6ac30b59d7b08c64d01a0307a45a0bf9412a67552ec4c146453814eb3bad",
     "language": "ink! 5.1.1",
     "compiler": "rustc 1.89.0",
     "build_info": {
@@ -14,12 +14,12 @@
     }
   },
   "contract": {
-    "name": "ferry_rules",
+    "name": "landfall_rules",
     "version": "0.1.0",
     "authors": [
-      "Ferry contributors"
+      "Landfall contributors"
     ],
-    "description": "Ferry policy + audit ledger (ink! v5, pallet-contracts on Portaldot)",
+    "description": "Landfall policy + audit ledger (ink! v5, pallet-contracts on Portaldot)",
     "license": "MIT"
   },
   "image": null,
@@ -171,7 +171,7 @@
         ],
         "docs": [],
         "label": "Approved",
-        "module_path": "ferry_rules::ferry_rules",
+        "module_path": "landfall_rules::landfall_rules",
         "signature_topic": "0x296c83735353b8c7b5d7bcc77d74e508c20cf74b246ef9820d1e4608931f2e12"
       },
       {
@@ -212,7 +212,7 @@
         ],
         "docs": [],
         "label": "ConfigUpdated",
-        "module_path": "ferry_rules::ferry_rules",
+        "module_path": "landfall_rules::landfall_rules",
         "signature_topic": "0x6e299c9a316183e9feca25e46f5c8cadad39578f4981e6be92e451fdb3419944"
       },
       {
@@ -231,7 +231,7 @@
         ],
         "docs": [],
         "label": "PausedSet",
-        "module_path": "ferry_rules::ferry_rules",
+        "module_path": "landfall_rules::landfall_rules",
         "signature_topic": "0x315cad1bf5f8696c24e662db53912abe0ba7f8677b2dd2aed776cf02d75d3246"
       },
       {
@@ -250,7 +250,7 @@
         ],
         "docs": [],
         "label": "RelayerUpdated",
-        "module_path": "ferry_rules::ferry_rules",
+        "module_path": "landfall_rules::landfall_rules",
         "signature_topic": "0xcc467a9a88d30e42777c46ac14e010f06f2dfdba5ccba99e51778618cbcf4e8c"
       },
       {
@@ -269,7 +269,7 @@
         ],
         "docs": [],
         "label": "OwnershipTransferred",
-        "module_path": "ferry_rules::ferry_rules",
+        "module_path": "landfall_rules::landfall_rules",
         "signature_topic": "0xc731ae5cbbc0008dc41d849cb57f22cea00491cb59dc0c7f674b5f7b467df29e"
       }
     ],
@@ -682,12 +682,12 @@
                             "array": {
                               "layout": {
                                 "leaf": {
-                                  "key": "0xafd70e1d",
+                                  "key": "0x5a88ad93",
                                   "ty": 2
                                 }
                               },
                               "len": 20,
-                              "offset": "0xafd70e1d"
+                              "offset": "0x5a88ad93"
                             }
                           },
                           "name": "recipient"
@@ -695,7 +695,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0xafd70e1d",
+                              "key": "0x5a88ad93",
                               "ty": 4
                             }
                           },
@@ -704,7 +704,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0xafd70e1d",
+                              "key": "0x5a88ad93",
                               "ty": 5
                             }
                           },
@@ -713,7 +713,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0xafd70e1d",
+                              "key": "0x5a88ad93",
                               "ty": 6
                             }
                           },
@@ -723,7 +723,7 @@
                       "name": "Approval"
                     }
                   },
-                  "root_key": "0xafd70e1d",
+                  "root_key": "0x5a88ad93",
                   "ty": 7
                 }
               },
@@ -734,11 +734,11 @@
                 "root": {
                   "layout": {
                     "leaf": {
-                      "key": "0xc6dc693d",
+                      "key": "0xa59ba0eb",
                       "ty": 4
                     }
                   },
-                  "root_key": "0xc6dc693d",
+                  "root_key": "0xa59ba0eb",
                   "ty": 14
                 }
               },
@@ -749,11 +749,11 @@
                 "root": {
                   "layout": {
                     "leaf": {
-                      "key": "0xeae6537c",
+                      "key": "0x3b2e9de6",
                       "ty": 5
                     }
                   },
-                  "root_key": "0xeae6537c",
+                  "root_key": "0x3b2e9de6",
                   "ty": 17
                 }
               },
@@ -778,7 +778,7 @@
               "name": "total_approved"
             }
           ],
-          "name": "FerryRules"
+          "name": "LandfallRules"
         }
       },
       "root_key": "0x00000000",
@@ -915,8 +915,8 @@
           }
         },
         "path": [
-          "ferry_rules",
-          "ferry_rules",
+          "landfall_rules",
+          "landfall_rules",
           "Approval"
         ]
       }
@@ -1144,75 +1144,75 @@
               {
                 "name": "owner",
                 "type": 0,
-                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1876603104u32, ()>,>>::Type"
+                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1512706915u32, ()>,>>::Type"
               },
               {
                 "name": "relayer",
                 "type": 0,
-                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4107174954u32, ()>,>>::Type"
+                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1421171550u32, ()>,>>::Type"
               },
               {
                 "name": "paused",
                 "type": 3,
-                "typeName": "<bool as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1479171161u32, ()>,>>::Type"
+                "typeName": "<bool as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<3359263764u32, ()>,>>::Type"
               },
               {
                 "name": "daily_budget",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<933910494u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2054620026u32, ()>,>>::Type"
               },
               {
                 "name": "recipient_cap",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2980006445u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4176687694u32, ()>,>>::Type"
               },
               {
                 "name": "cooldown_blocks",
                 "type": 5,
-                "typeName": "<BlockNumber as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2803546323u32, ()>,>>::Type"
+                "typeName": "<BlockNumber as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<500286823u32, ()>,>>::Type"
               },
               {
                 "name": "day",
                 "type": 6,
-                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1774536409u32, ()>,>>::Type"
+                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1087604336u32, ()>,>>::Type"
               },
               {
                 "name": "spent_today",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4201541906u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2265237382u32, ()>,>>::Type"
               },
               {
                 "name": "approvals",
                 "type": 7,
-                "typeName": "<Mapping<OrderId, Approval> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<487511983u32, ()\n>,>>::Type"
+                "typeName": "<Mapping<OrderId, Approval> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<2477623386u32,\n()>,>>::Type"
               },
               {
                 "name": "received",
                 "type": 14,
-                "typeName": "<Mapping<EvmAddress, Balance> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1030347974u32,\n()>,>>::Type"
+                "typeName": "<Mapping<EvmAddress, Balance> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3953171365u32,\n()>,>>::Type"
               },
               {
                 "name": "last_approval_block",
                 "type": 17,
-                "typeName": "<Mapping<EvmAddress, BlockNumber> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<2085873386u32,\n()>,>>::Type"
+                "typeName": "<Mapping<EvmAddress, BlockNumber> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3869060667u32,\n()>,>>::Type"
               },
               {
                 "name": "approval_count",
                 "type": 6,
-                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<3250559439u32, ()>,>>::Type"
+                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<2580055194u32, ()>,>>::Type"
               },
               {
                 "name": "total_approved",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4189266069u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1395792u32, ()>,>>::Type"
               }
             ]
           }
         },
         "path": [
-          "ferry_rules",
-          "ferry_rules",
-          "FerryRules"
+          "landfall_rules",
+          "landfall_rules",
+          "LandfallRules"
         ]
       }
     },
@@ -1411,8 +1411,8 @@
           }
         },
         "path": [
-          "ferry_rules",
-          "ferry_rules",
+          "landfall_rules",
+          "landfall_rules",
           "Error"
         ]
       }
@@ -1673,8 +1673,8 @@
           }
         },
         "path": [
-          "ferry_rules",
-          "ferry_rules",
+          "landfall_rules",
+          "landfall_rules",
           "Stats"
         ]
       }

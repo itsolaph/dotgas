@@ -5,12 +5,12 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/// @title FerryDock
-/// @notice Destination-chain (Portaldot, pallet-revive EVM) side of Ferry. Holds a pool of native tPOT
-///         and pays it out to new users when the relayer fills a FerryGate order.
+/// @title LandfallDock
+/// @notice Destination-chain (Portaldot, pallet-revive EVM) side of Landfall. Holds a pool of native tPOT
+///         and pays it out to new users when the relayer fills a LandfallGate order.
 /// @dev    Amounts are in the 18-decimal EVM-side unit. Portaldot's native token has 14 decimals, so fill
 ///         amounts should be multiples of 1e4 wei to map cleanly onto native balances.
-contract FerryDock is Ownable2Step, Pausable, ReentrancyGuard {
+contract LandfallDock is Ownable2Step, Pausable, ReentrancyGuard {
     address public relayer;
     uint256 public maxPerFill;
     uint256 public recipientCap; // lifetime cap per recipient address
@@ -56,7 +56,7 @@ contract FerryDock is Ownable2Step, Pausable, ReentrancyGuard {
         emit Funded(msg.sender, msg.value);
     }
 
-    /// @notice Deliver `amount` tPOT to `recipient` for a FerryGate order. Each order id can fill once.
+    /// @notice Deliver `amount` tPOT to `recipient` for a LandfallGate order. Each order id can fill once.
     function fill(bytes32 orderId, address payable recipient, uint256 amount)
         external
         nonReentrant

@@ -1,12 +1,12 @@
 {
-  "name": "@ferry/relayer",
+  "name": "@landfall/relayer",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Ferry relayer: watches FerryGate on Base, approves on ink! rules, fills FerryDock on Portaldot, claims on Base",
+  "description": "Landfall relayer: watches LandfallGate on Base, approves on ink! rules, fills LandfallDock on Portaldot, claims on Base",
   "bin": {
-    "ferry-relayer": "src/index.ts"
+    "landfall-relayer": "src/index.ts"
   },
   "scripts": {
     "start": "node --env-file-if-exists=../.env src/index.ts",

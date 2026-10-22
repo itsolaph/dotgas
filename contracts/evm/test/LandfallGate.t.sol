@@ -4,17 +4,17 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {FerryGate} from "../src/FerryGate.sol";
+import {LandfallGate} from "../src/LandfallGate.sol";
 import {MockERC20, FeeOnTransferERC20} from "./mocks/MockERC20.sol";
 
 /// @dev Receiver that tries to re-enter the gate when it gets ETH.
 contract Reenterer {
-    FerryGate public gate;
+    LandfallGate public gate;
     bytes32 public target;
     bool public attempted;
     bool public reentered;
 
-    constructor(FerryGate gate_) {
+    constructor(LandfallGate gate_) {
         gate = gate_;
     }
 
@@ -39,8 +39,8 @@ contract RejectEth {
     }
 }
 
-contract FerryGateTest is Test {
-    FerryGate gate;
+contract LandfallGateTest is Test {
+    LandfallGate gate;
     MockERC20 usdc;
 
     address owner = makeAddr("owner");
@@ -72,7 +72,7 @@ contract FerryGateTest is Test {
 
     function setUp() public {
         usdc = new MockERC20();
-        gate = new FerryGate(owner, relayer, treasury, address(usdc), TTL);
+        gate = new LandfallGate(owner, relayer, treasury, address(usdc), TTL);
         vm.startPrank(owner);
         gate.setTier(1, PRICE_WEI, PRICE_USDC, DST, true);
         gate.setTier(2, 0.002 ether, 4_000_000, 10 ether, true);
@@ -99,17 +99,17 @@ contract FerryGateTest is Test {
     // ------------------------------------------------------------ constructor / config
 
     function test_constructor_rejectsZeroAddresses() public {
-        vm.expectRevert(FerryGate.ZeroAddress.selector);
-        new FerryGate(owner, address(0), treasury, address(usdc), TTL);
-        vm.expectRevert(FerryGate.ZeroAddress.selector);
-        new FerryGate(owner, relayer, address(0), address(usdc), TTL);
+        vm.expectRevert(LandfallGate.ZeroAddress.selector);
+        new LandfallGate(owner, address(0), treasury, address(usdc), TTL);
+        vm.expectRevert(LandfallGate.ZeroAddress.selector);
+        new LandfallGate(owner, relayer, address(0), address(usdc), TTL);
     }
 
     function test_constructor_rejectsBadTtl() public {
-        vm.expectRevert(FerryGate.BadTtl.selector);
-        new FerryGate(owner, relayer, treasury, address(usdc), 1 minutes);
-        vm.expectRevert(FerryGate.BadTtl.selector);
-        new FerryGate(owner, relayer, treasury, address(usdc), 8 days);
+        vm.expectRevert(LandfallGate.BadTtl.selector);
+        new LandfallGate(owner, relayer, treasury, address(usdc), 1 minutes);
+        vm.expectRevert(LandfallGate.BadTtl.selector);
+        new LandfallGate(owner, relayer, treasury, address(usdc), 8 days);
     }
 
     // ------------------------------------------------------------ happy path (ETH)
@@ -131,12 +131,12 @@ contract FerryGateTest is Test {
         assertEq(id, expectedId);
         assertEq(gate.nonce(), 1);
 
-        FerryGate.Order memory o = gate.getOrder(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
         assertEq(o.user, alice);
         assertEq(o.recipient, portaldotRecipient);
         assertEq(o.token, address(0));
         assertEq(o.tier, 1);
-        assertEq(uint8(o.status), uint8(FerryGate.Status.Open));
+        assertEq(uint8(o.status), uint8(LandfallGate.Status.Open));
         assertEq(o.deadline, block.timestamp + TTL);
         assertEq(o.amount, PRICE_WEI);
         assertEq(o.dstAmount, DST);
@@ -151,7 +151,7 @@ contract FerryGateTest is Test {
         gate.claim(id, FILL_REF);
         assertEq(treasury.balance, PRICE_WEI);
         assertEq(address(gate).balance, 0);
-        assertEq(uint8(gate.statusOf(id)), uint8(FerryGate.Status.Filled));
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Filled));
         assertEq(gate.fillTxRefOf(id), FILL_REF);
     }
 
@@ -160,7 +160,7 @@ contract FerryGateTest is Test {
         vm.warp(block.timestamp + TTL);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
-        assertEq(uint8(gate.statusOf(id)), uint8(FerryGate.Status.Filled));
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Filled));
     }
 
     function test_orderIdsAreUnique() public {
@@ -174,25 +174,25 @@ contract FerryGateTest is Test {
 
     function test_open_wrongValue_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.WrongPayment.selector, PRICE_WEI, PRICE_WEI + 1));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_WEI, PRICE_WEI + 1));
         gate.open{value: PRICE_WEI + 1}(portaldotRecipient, 1);
     }
 
     function test_open_inactiveTier_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.TierInactive.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.TierInactive.selector, 9));
         gate.open{value: PRICE_WEI}(portaldotRecipient, 9);
     }
 
     function test_open_ethDisabledForTier_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.WrongPayment.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, 0, 0));
         gate.open{value: 0}(portaldotRecipient, 3);
     }
 
     function test_open_zeroRecipient_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(FerryGate.ZeroAddress.selector);
+        vm.expectRevert(LandfallGate.ZeroAddress.selector);
         gate.open{value: PRICE_WEI}(address(0), 1);
     }
 
@@ -200,7 +200,7 @@ contract FerryGateTest is Test {
         vm.prank(owner);
         gate.setTier(1, PRICE_WEI, PRICE_USDC, DST, false);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.TierInactive.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.TierInactive.selector, 1));
         gate.open{value: PRICE_WEI}(portaldotRecipient, 1);
     }
 
@@ -208,7 +208,7 @@ contract FerryGateTest is Test {
         bytes32 id = _openEth();
         vm.prank(owner);
         gate.setTier(1, 1 ether, 1, 1, true);
-        FerryGate.Order memory o = gate.getOrder(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
         assertEq(o.amount, PRICE_WEI);
         assertEq(o.dstAmount, DST);
     }
@@ -224,13 +224,13 @@ contract FerryGateTest is Test {
         vm.prank(bob); // anyone may trigger
         gate.refund(id);
         assertEq(alice.balance, before + PRICE_WEI);
-        assertEq(uint8(gate.statusOf(id)), uint8(FerryGate.Status.Refunded));
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
     }
 
     function test_refund_beforeDeadline_reverts() public {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.DeadlineNotReached.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.DeadlineNotReached.selector, id));
         gate.refund(id);
     }
 
@@ -238,7 +238,7 @@ contract FerryGateTest is Test {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL + 1);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.DeadlinePassed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.DeadlinePassed.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -246,7 +246,7 @@ contract FerryGateTest is Test {
         bytes32 id = _openEth();
         vm.startPrank(relayer);
         gate.claim(id, FILL_REF);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.claim(id, FILL_REF);
         vm.stopPrank();
     }
@@ -255,7 +255,7 @@ contract FerryGateTest is Test {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.refund(id);
     }
 
@@ -264,7 +264,7 @@ contract FerryGateTest is Test {
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
         vm.warp(block.timestamp + TTL + 1);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.refund(id);
     }
 
@@ -273,16 +273,16 @@ contract FerryGateTest is Test {
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.claim(id, FILL_REF);
     }
 
     function test_unknownOrder_reverts() public {
         bytes32 id = keccak256("nope");
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -303,16 +303,16 @@ contract FerryGateTest is Test {
         vm.prank(address(rej));
         bytes32 id = gate.open{value: PRICE_WEI}(portaldotRecipient, 1);
         vm.warp(block.timestamp + TTL + 1);
-        vm.expectRevert(FerryGate.TransferFailed.selector);
+        vm.expectRevert(LandfallGate.TransferFailed.selector);
         gate.refund(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(FerryGate.Status.Open));
+        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Open));
     }
 
     // ------------------------------------------------------------ USDC path
 
     function test_openUSDC_claim() public {
         bytes32 id = _openUsdc();
-        FerryGate.Order memory o = gate.getOrder(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
         assertEq(o.token, address(usdc));
         assertEq(o.amount, PRICE_USDC);
         assertEq(usdc.balanceOf(address(gate)), PRICE_USDC);
@@ -342,7 +342,7 @@ contract FerryGateTest is Test {
         vm.prank(owner);
         gate.setPaymentToken(address(0));
         vm.prank(alice);
-        vm.expectRevert(FerryGate.TokenPaymentDisabled.selector);
+        vm.expectRevert(LandfallGate.TokenPaymentDisabled.selector);
         gate.openUSDC(portaldotRecipient, 1);
     }
 
@@ -350,7 +350,7 @@ contract FerryGateTest is Test {
         vm.prank(owner);
         gate.setTier(4, PRICE_WEI, 0, DST, true);
         vm.prank(alice);
-        vm.expectRevert(FerryGate.TokenPaymentDisabled.selector);
+        vm.expectRevert(LandfallGate.TokenPaymentDisabled.selector);
         gate.openUSDC(portaldotRecipient, 4);
     }
 
@@ -362,7 +362,7 @@ contract FerryGateTest is Test {
         vm.startPrank(alice);
         fot.approve(address(gate), PRICE_USDC);
         vm.expectRevert(
-            abi.encodeWithSelector(FerryGate.WrongPayment.selector, PRICE_USDC, PRICE_USDC - PRICE_USDC / 100)
+            abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_USDC, PRICE_USDC - PRICE_USDC / 100)
         );
         gate.openUSDC(portaldotRecipient, 1);
         vm.stopPrank();
@@ -412,10 +412,10 @@ contract FerryGateTest is Test {
     function test_claim_onlyRelayer() public {
         bytes32 id = _openEth();
         vm.prank(alice);
-        vm.expectRevert(FerryGate.NotRelayer.selector);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
         vm.prank(owner);
-        vm.expectRevert(FerryGate.NotRelayer.selector);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
     }
 
@@ -445,7 +445,7 @@ contract FerryGateTest is Test {
         vm.prank(owner);
         gate.setRelayer(newRelayer);
         vm.prank(relayer);
-        vm.expectRevert(FerryGate.NotRelayer.selector);
+        vm.expectRevert(LandfallGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
         vm.prank(newRelayer);
         gate.claim(id, FILL_REF);
@@ -453,7 +453,7 @@ contract FerryGateTest is Test {
 
     function test_setRelayer_zero_reverts() public {
         vm.prank(owner);
-        vm.expectRevert(FerryGate.ZeroAddress.selector);
+        vm.expectRevert(LandfallGate.ZeroAddress.selector);
         gate.setRelayer(address(0));
     }
 
@@ -463,7 +463,7 @@ contract FerryGateTest is Test {
         bytes32 id = _openEth();
         assertEq(gate.getOrder(id).deadline, block.timestamp + 2 hours);
         vm.prank(owner);
-        vm.expectRevert(FerryGate.BadTtl.selector);
+        vm.expectRevert(LandfallGate.BadTtl.selector);
         gate.setOrderTtl(1);
     }
 
@@ -488,7 +488,7 @@ contract FerryGateTest is Test {
         vm.deal(alice, price);
         vm.prank(alice);
         bytes32 id = gate.open{value: price}(recipient, tier);
-        FerryGate.Order memory o = gate.getOrder(id);
+        LandfallGate.Order memory o = gate.getOrder(id);
         assertEq(o.recipient, recipient);
         assertEq(o.tier, tier);
         assertEq(o.amount, price);
@@ -503,10 +503,10 @@ contract FerryGateTest is Test {
         bool canClaim = elapsed <= TTL;
 
         vm.prank(relayer);
-        (bool claimOk,) = address(gate).call(abi.encodeCall(FerryGate.claim, (id, FILL_REF)));
+        (bool claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
         assertEq(claimOk, canClaim);
 
-        (bool refundOk,) = address(gate).call(abi.encodeCall(FerryGate.refund, (id)));
+        (bool refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
         assertEq(refundOk, !canClaim);
 
         // Funds always end up in exactly one place.
@@ -519,7 +519,7 @@ contract FerryGateTest is Test {
         value = bound(value, 0, 10 ether);
         vm.assume(value != PRICE_WEI);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(FerryGate.WrongPayment.selector, PRICE_WEI, value));
+        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_WEI, value));
         gate.open{value: value}(portaldotRecipient, 1);
     }
 }

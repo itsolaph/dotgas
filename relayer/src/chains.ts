@@ -40,7 +40,7 @@ export interface GateOrder {
   dstAmount: bigint;
 }
 
-/** Base Sepolia side (FerryGate). */
+/** Base Sepolia side (LandfallGate). */
 export interface SourceChain {
   headBlock(): Promise<bigint>;
   latestTimestamp(): Promise<bigint>;
@@ -50,7 +50,7 @@ export interface SourceChain {
   claim(orderId: Hex, fillTxRef: Hex, dryRun: boolean): Promise<Hex | null>;
 }
 
-/** Portaldot EVM side (FerryDock). */
+/** Portaldot EVM side (LandfallDock). */
 export interface DestChain {
   isFilled(orderId: Hex): Promise<boolean>;
   findFillTx(orderId: Hex): Promise<Hex | null>;

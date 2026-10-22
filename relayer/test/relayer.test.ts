@@ -231,7 +231,7 @@ test('transient errors are retried, then marked failed after maxAttempts', async
 });
 
 test('dry-run sends nothing and writes no state file', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'ferry-'));
+  const dir = mkdtempSync(join(tmpdir(), 'landfall-'));
   const file = join(dir, 's.json');
   const { src, dst, rules, r } = setup({ dryRun: true }, file);
   src.open(1);
@@ -243,7 +243,7 @@ test('dry-run sends nothing and writes no state file', async () => {
 });
 
 test('resumes from the state file after a restart', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'ferry-'));
+  const dir = mkdtempSync(join(tmpdir(), 'landfall-'));
   const file = join(dir, 's.json');
   const first = setup({}, file);
   first.src.open(1);

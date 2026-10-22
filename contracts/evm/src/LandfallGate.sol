@@ -7,14 +7,14 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title FerryGate
-/// @notice Source-chain (Base Sepolia) side of Ferry. A user pays a fixed tier price in ETH or in an
+/// @title LandfallGate
+/// @notice Source-chain (Base Sepolia) side of Landfall. A user pays a fixed tier price in ETH or in an
 ///         ERC20 (e.g. test USDC) and opens an order asking for tPOT gas to be delivered to a Portaldot
 ///         address. A trusted relayer fills the order on Portaldot and then claims the escrowed payment.
 ///         If the order is not claimed before its deadline, anyone can refund it back to the user.
 /// @dev    Pausing only blocks new orders. Claims and refunds keep working so that in-flight orders can
 ///         always be settled one way or the other.
-contract FerryGate is Ownable2Step, Pausable, ReentrancyGuard {
+contract LandfallGate is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum Status {

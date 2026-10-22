@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {FerryDock} from "../src/FerryDock.sol";
+import {LandfallDock} from "../src/LandfallDock.sol";
 import {FirstSteps} from "../src/FirstSteps.sol";
 
-/// @notice Deploys FerryDock + FirstSteps on Portaldot's EVM (pallet-revive via eth-rpc).
+/// @notice Deploys LandfallDock + FirstSteps on Portaldot's EVM (pallet-revive via eth-rpc).
 ///
 /// Env:
 ///   DEPLOYER_PRIVATE_KEY  required
@@ -16,7 +16,7 @@ import {FirstSteps} from "../src/FirstSteps.sol";
 ///
 /// Portaldot gas estimates are very large numbers; never pass a fixed --gas-limit, let the RPC estimate.
 contract DeployPortaldot is Script {
-    function run() external returns (FerryDock dock, FirstSteps book) {
+    function run() external returns (LandfallDock dock, FirstSteps book) {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
         address relayer = vm.envAddress("RELAYER_ADDRESS");
@@ -25,7 +25,7 @@ contract DeployPortaldot is Script {
         uint256 fund = vm.envOr("DOCK_INITIAL_FUND", uint256(0));
 
         vm.startBroadcast(pk);
-        dock = new FerryDock(deployer, relayer, maxPerFill, cap);
+        dock = new LandfallDock(deployer, relayer, maxPerFill, cap);
         book = new FirstSteps();
         if (fund > 0) {
             (bool ok,) = address(dock).call{value: fund}("");
@@ -33,7 +33,7 @@ contract DeployPortaldot is Script {
         }
         vm.stopBroadcast();
 
-        console2.log("FerryDock", address(dock));
+        console2.log("LandfallDock", address(dock));
         console2.log("FirstSteps", address(book));
 
         string memory k = "portaldot";
@@ -41,7 +41,7 @@ contract DeployPortaldot is Script {
         vm.serializeAddress(k, "relayer", relayer);
         vm.serializeUint(k, "deployBlock", block.number);
         vm.serializeAddress(k, "FirstSteps", address(book));
-        string memory json = vm.serializeAddress(k, "FerryDock", address(dock));
+        string memory json = vm.serializeAddress(k, "LandfallDock", address(dock));
         vm.writeJson(json, string.concat("deployments/portaldot-", vm.toString(block.chainid), ".json"));
     }
 }
