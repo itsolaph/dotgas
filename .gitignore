@@ -20,3 +20,7 @@ state/
 .ferry-state*
 e2e-logs/
 *.log
+
+# local e2e deployment outputs
+contracts/evm/deployments/*-31337.json
+contracts/evm/deployments/*-31338.json
