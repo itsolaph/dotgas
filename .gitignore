@@ -1,0 +1,22 @@
+# deps / build
+node_modules/
+dist/
+out/
+cache/
+target/
+broadcast/
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# runtime state
+*.state.json
+state/
+.ferry-state*
+e2e-logs/
+*.log
