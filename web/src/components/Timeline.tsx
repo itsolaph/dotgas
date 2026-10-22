@@ -3,8 +3,10 @@ import { config } from '../config.ts';
 import { TxRef } from './TxRef.tsx';
 
 export interface GateOrderView {
-  status: number; // 0 None, 1 Open, 2 Filled(claimed), 3 Refunded
+  status: number; // 0 None, 1 Open, 2 Filled(claimed), 3 Refunded, 4 Reserved
   deadline: bigint;
+  /** When the user can refund: the deadline while Open, reservedAt + reserveTimeout while Reserved. */
+  refundAt: bigint | null;
   dstAmount: bigint;
   recipient: string;
 }
@@ -14,6 +16,7 @@ export interface RelayerRecord {
   status: string;
   reason?: string;
   openTx?: string;
+  reserveTx?: string;
   approveTx?: string;
   approveBlock?: string;
   fillTx?: string;
@@ -41,6 +44,7 @@ export function Timeline({
   const claimed = order?.status === 2 || record?.status === 'claimed';
   const refunded = order?.status === 3 || record?.status === 'refunded';
   const fillTx = record?.fillTx ?? fillRef ?? undefined;
+  const reserved = order?.status === 4 || !!record?.reserveTx || claimed;
   const approved = !!record?.approveTx || !!fillTx || claimed;
   const halted = record && ['rejected', 'skipped', 'expired', 'failed'].includes(record.status);
 
@@ -51,8 +55,17 @@ export function Timeline({
       body: <TxRef hash={openTx ?? record?.openTx} explorer={config.baseExplorer} />,
     },
     {
+      title: 'Reserved on Base',
+      state: reserved ? 'done' : halted ? 'failed' : 'active',
+      body: record?.reserveTx ? (
+        <TxRef hash={record.reserveTx} explorer={config.baseExplorer} />
+      ) : halted && !reserved ? (
+        <span className="err">{record?.reason ?? record?.status}</span>
+      ) : null,
+    },
+    {
       title: 'Approved by rules (WASM / ink!)',
-      state: approved ? 'done' : halted ? 'failed' : 'active',
+      state: approved ? 'done' : halted ? 'failed' : reserved ? 'active' : 'todo',
       body:
         record?.approveTx === 'off' ? (
           <span className="muted">rules step disabled (RULES_MODE=off)</span>
@@ -85,7 +98,8 @@ export function Timeline({
     },
   ];
 
-  const left = order ? Number(order.deadline) - nowSec : null;
+  const left = order?.refundAt != null ? Number(order.refundAt) - nowSec : null;
+  const countdown = (s: number) => `${Math.floor(s / 3600) ? `${Math.floor(s / 3600)}h ` : ''}${Math.floor((s % 3600) / 60)}m ${s % 60}s`;
 
   return (
     <div className="timeline">
@@ -101,7 +115,14 @@ export function Timeline({
       {refunded && <p className="note">Order refunded on Base.</p>}
       {order && order.status === 1 && left !== null && (
         <p className="muted small">
-          {left > 0 ? `Refund unlocks in ${Math.floor(left / 60)}m ${left % 60}s if not filled.` : 'Deadline passed.'}
+          {left > 0 ? `Refund unlocks in ${countdown(left)} if not filled.` : 'Deadline passed.'}
+        </p>
+      )}
+      {order && order.status === 4 && left !== null && (
+        <p className="muted small">
+          {left > 0
+            ? `Reserved by the relayer. If it does not complete, refund unlocks in ${countdown(left)}.`
+            : 'Reservation timed out.'}
         </p>
       )}
     </div>

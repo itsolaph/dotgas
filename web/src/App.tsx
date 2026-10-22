@@ -33,6 +33,7 @@ export function App() {
   const [order, setOrder] = useState<GateOrderView | null>(null);
   const [record, setRecord] = useState<RelayerRecord | null>(null);
   const [fillRef, setFillRef] = useState<Hex | null>(null);
+  const [reserveTimeout, setReserveTimeout] = useState<bigint | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -67,6 +68,11 @@ export function App() {
       }
       setTiers(out);
       if (out[0]) setTierId(out[0].id);
+      try {
+        setReserveTimeout(await basePublic.readContract({ address: config.gate, abi: gateAbi, functionName: 'reserveTimeout' }));
+      } catch {
+        setReserveTimeout(null);
+      }
     })();
   }, []);
 
@@ -91,7 +97,10 @@ export function App() {
     }
     if (orderId && isConfigured) {
       const o = await safe(() => basePublic.readContract({ address: config.gate, abi: gateAbi, functionName: 'getOrder', args: [orderId] }));
-      if (o) setOrder({ status: o.status, deadline: o.deadline, dstAmount: o.dstAmount, recipient: o.recipient });
+      if (o) {
+        const refundAt = o.status === 1 ? o.deadline : o.status === 4 && reserveTimeout !== null ? o.reservedAt + reserveTimeout : null;
+        setOrder({ status: o.status, deadline: o.deadline, refundAt, dstAmount: o.dstAmount, recipient: o.recipient });
+      }
       const ref = await safe(() => basePublic.readContract({ address: config.gate, abi: gateAbi, functionName: 'fillTxRefOf', args: [orderId] }));
       setFillRef(ref && ref !== zeroHash ? ref : null);
       const r = await safe(async () => {
@@ -100,7 +109,7 @@ export function App() {
       });
       setRecord(r);
     }
-  }, [account, orderId, target]);
+  }, [account, orderId, target, reserveTimeout]);
 
   useEffect(() => {
     void refresh();
@@ -200,7 +209,7 @@ export function App() {
       await basePublic.waitForTransactionReceipt({ hash });
     });
 
-  const canRefund = order?.status === 1 && Number(order.deadline) < now;
+  const canRefund = (order?.status === 1 || order?.status === 4) && order.refundAt !== null && Number(order.refundAt) < now;
   const price = tier ? (payWith === 'ETH' ? tier.priceWei : tier.priceToken) : 0n;
   const payDisabled = !tier || !target || price === 0n || !!busy || !isConfigured;
 
@@ -287,7 +296,7 @@ export function App() {
           <Timeline openTx={openTx} order={order} record={record} fillRef={fillRef} nowSec={now} />
           {canRefund && (
             <button className="danger" onClick={onRefund} disabled={!!busy}>
-              Deadline passed — refund my payment
+              {order?.status === 4 ? 'Reservation timed out — refund my payment' : 'Deadline passed — refund my payment'}
             </button>
           )}
         </section>
@@ -297,8 +306,8 @@ export function App() {
       <StatusPanel />
 
       <footer className="muted small">
-        Intent-bridge model: an operator-run relayer fills on Portaldot and is repaid on Base; if it does not fill in time, you can refund
-        on-chain after the deadline. Testnet only.
+        Intent-bridge model: an operator-run relayer reserves your order, fills on Portaldot and is repaid on Base. If it never reserves,
+        you can refund on-chain after the deadline; if it reserves but does not complete, after the reservation timeout. Testnet only.
       </footer>
     </main>
   );
