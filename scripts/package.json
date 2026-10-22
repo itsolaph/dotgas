@@ -1,0 +1,23 @@
+{
+  "name": "@ferry/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "e2e": "node e2e/run.ts",
+    "deploy:rules": "node deploy-rules.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@polkadot/api": "^17.0.2",
+    "@polkadot/api-contract": "^17.0.2",
+    "@polkadot/keyring": "^14.0.1",
+    "@polkadot/util-crypto": "^14.0.1",
+    "viem": "^2.57.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^5.9.3"
+  }
+}

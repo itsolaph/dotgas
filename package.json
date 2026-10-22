@@ -1,0 +1,24 @@
+{
+  "name": "ferry",
+  "private": true,
+  "description": "Ferry: gas onboarding into Portaldot (Base Sepolia -> Portaldot tPOT)",
+  "license": "MIT",
+  "workspaces": [
+    "relayer",
+    "web",
+    "scripts"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "make test",
+    "test:evm": "make test-evm",
+    "test:ink": "make test-ink",
+    "test:relayer": "npm --workspace relayer test",
+    "test:e2e": "make test-e2e",
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "relayer": "npm --workspace relayer start",
+    "web": "npm --workspace web run dev"
+  }
+}
