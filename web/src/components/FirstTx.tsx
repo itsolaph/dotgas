@@ -11,9 +11,9 @@ interface Entry {
   message: string;
 }
 
-/** The finale: the user's very first Portaldot transaction, paid with the tPOT Landfall delivered. */
+/** The finale: the user's very first Portaldot transaction, paid with the tPOT DotGas delivered. */
 export function FirstTx({ account, tpot }: { account: Address | null; tpot: bigint | null }) {
-  const [msg, setMsg] = useState('gm Portaldot — arrived by Landfall ⛴');
+  const [msg, setMsg] = useState('gm Portaldot — arrived by DotGas ⛴');
   const [tx, setTx] = useState<Hex | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

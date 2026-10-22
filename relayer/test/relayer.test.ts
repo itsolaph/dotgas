@@ -38,7 +38,7 @@ function revert(abi: Abi, errorName: string, args: readonly unknown[] = []) {
 /** Shared action trace across the fakes, to check ordering. */
 type Trace = string[];
 
-/** Models LandfallGate: Open -> Reserved -> Filled / Refunded, with reserveSafety and reserveTimeout. */
+/** Models DotGasGate: Open -> Reserved -> Filled / Refunded, with reserveSafety and reserveTimeout. */
 class FakeGate implements SourceChain {
   head = 100n;
   now = 1_000_000n;
@@ -127,7 +127,7 @@ class FakeGate implements SourceChain {
   }
 }
 
-/** Models LandfallDock plus the Portaldot chain (blocks, receipts, mempool). */
+/** Models DotGasDock plus the Portaldot chain (blocks, receipts, mempool). */
 class FakeDock implements DestChain {
   head = 1000n;
   pool = 100n * TPOT;
@@ -711,7 +711,7 @@ test('retries back off exponentially', async () => {
 // ---------------------------------------------------------------- dry-run, persistence, rebuild
 
 test('dry-run sends nothing and writes no state file', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'landfall-'));
+  const dir = mkdtempSync(join(tmpdir(), 'dotgas-'));
   const file = join(dir, 's.json');
   const { src, dst, rules, r } = setup({ dryRun: true }, file);
   src.open(1);
@@ -724,7 +724,7 @@ test('dry-run sends nothing and writes no state file', async () => {
 });
 
 test('resumes from the state file after a restart', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'landfall-'));
+  const dir = mkdtempSync(join(tmpdir(), 'dotgas-'));
   const file = join(dir, 's.json');
   const first = setup({}, file);
   first.src.open(1);

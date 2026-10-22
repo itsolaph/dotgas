@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title FirstSteps
-/// @notice A tiny on-chain guestbook on Portaldot. Signing it is the "first transaction" a Landfall user
+/// @notice A tiny on-chain guestbook on Portaldot. Signing it is the "first transaction" a DotGas user
 ///         makes with the gas they just received.
 contract FirstSteps {
     struct Entry {

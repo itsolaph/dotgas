@@ -46,7 +46,7 @@ export interface GateOrder {
 /** Called with the tx hash as soon as it is broadcast, before waiting for the receipt. */
 export type OnBroadcast = (hash: Hex) => void;
 
-/** Base Sepolia side (LandfallGate). */
+/** Base Sepolia side (DotGasGate). */
 export interface SourceChain {
   headBlock(): Promise<bigint>;
   latestTimestamp(): Promise<bigint>;
@@ -72,7 +72,7 @@ export interface FillReceipt {
 
 export type FillSimulation = { ok: true } | { ok: false; error: string; permanent: boolean };
 
-/** Portaldot EVM side (LandfallDock). */
+/** Portaldot EVM side (DotGasDock). */
 export interface DestChain {
   isFilled(orderId: Hex): Promise<boolean>;
   findFillTx(orderId: Hex): Promise<Hex | null>;

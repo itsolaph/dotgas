@@ -1,7 +1,7 @@
 {
-  "name": "landfall",
+  "name": "dotgas",
   "private": true,
-  "description": "Landfall: gas onboarding into Portaldot (Base Sepolia -> Portaldot tPOT)",
+  "description": "DotGas: gas onboarding into Portaldot (Base Sepolia -> Portaldot tPOT)",
   "license": "MIT",
   "workspaces": [
     "relayer",

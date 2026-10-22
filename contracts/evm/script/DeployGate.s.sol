@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {LandfallGate} from "../src/LandfallGate.sol";
+import {DotGasGate} from "../src/DotGasGate.sol";
 
-/// @notice Deploys LandfallGate on the source chain (Base Sepolia) and configures default tiers.
+/// @notice Deploys DotGasGate on the source chain (Base Sepolia) and configures default tiers.
 ///
 /// Env (keys are only ever read from the environment):
 ///   DEPLOYER_PRIVATE_KEY  required
@@ -18,7 +18,7 @@ import {LandfallGate} from "../src/LandfallGate.sol";
 contract DeployGate is Script {
     address constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
 
-    function run() external returns (LandfallGate gate) {
+    function run() external returns (DotGasGate gate) {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
         address relayer = vm.envAddress("RELAYER_ADDRESS");
@@ -27,7 +27,7 @@ contract DeployGate is Script {
         uint64 ttl = uint64(vm.envOr("ORDER_TTL", uint256(1800)));
 
         vm.startBroadcast(pk);
-        gate = new LandfallGate(deployer, relayer, treasury, token, ttl);
+        gate = new DotGasGate(deployer, relayer, treasury, token, ttl);
         // Defaults: tPOT amounts are 18-decimal EVM-side units, multiples of 1e4 (native tPOT has 14 decimals).
         _tier(gate, 1, 0.0002 ether, 500_000, 2 ether); // "Starter": 0.5 USDC -> 2 tPOT
         _tier(gate, 2, 0.0005 ether, 1_000_000, 5 ether); // "Explorer": 1 USDC -> 5 tPOT
@@ -38,13 +38,13 @@ contract DeployGate is Script {
         if (timeout != 0) gate.setReserveTimeout(uint64(timeout));
         vm.stopBroadcast();
 
-        console2.log("LandfallGate", address(gate));
+        console2.log("DotGasGate", address(gate));
         // The relayer needs this as GATE_DEPLOY_BLOCK to rebuild its order set from events.
         console2.log("GATE_DEPLOY_BLOCK", block.number);
         _writeDeployment(address(gate), relayer, treasury, token);
     }
 
-    function _tier(LandfallGate gate, uint8 id, uint256 priceWei, uint256 priceToken, uint256 dst) internal {
+    function _tier(DotGasGate gate, uint8 id, uint256 priceWei, uint256 priceToken, uint256 dst) internal {
         string memory n = vm.toString(id);
         gate.setTier(
             id,
@@ -62,7 +62,7 @@ contract DeployGate is Script {
         vm.serializeAddress(k, "treasury", treasury);
         vm.serializeAddress(k, "paymentToken", token);
         vm.serializeUint(k, "deployBlock", block.number);
-        string memory json = vm.serializeAddress(k, "LandfallGate", gate);
+        string memory json = vm.serializeAddress(k, "DotGasGate", gate);
         vm.writeJson(json, string.concat("deployments/gate-", vm.toString(block.chainid), ".json"));
     }
 }

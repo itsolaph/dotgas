@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-//! # Landfall rules (WASM half)
+//! # DotGas rules (WASM half)
 //!
-//! Policy engine + audit ledger for Landfall, deployed on Portaldot's `pallet-contracts`.
-//! Before the relayer pays out tPOT from `LandfallDock` (EVM, pallet-revive) it must get an
+//! Policy engine + audit ledger for DotGas, deployed on Portaldot's `pallet-contracts`.
+//! Before the relayer pays out tPOT from `DotGasDock` (EVM, pallet-revive) it must get an
 //! approval recorded here. The contract enforces:
 //!
 //! * a global daily budget (UTC days derived from the block timestamp),
@@ -16,10 +16,10 @@
 //! Amounts are native tPOT units (14 decimals), not the 18-decimal EVM-side unit.
 //!
 //! There is no direct call between the WASM and EVM contracts in the runtime: the relayer
-//! calls `approve` here first and only then calls `LandfallDock.fill`.
+//! calls `approve` here first and only then calls `DotGasDock.fill`.
 
 #[ink::contract]
-mod landfall_rules {
+mod dotgas_rules {
     use ink::storage::Mapping;
 
     pub type OrderId = [u8; 32];
@@ -112,7 +112,7 @@ mod landfall_rules {
     }
 
     #[ink(storage)]
-    pub struct LandfallRules {
+    pub struct DotGasRules {
         owner: AccountId,
         pending_owner: Option<AccountId>,
         relayer: AccountId,
@@ -129,7 +129,7 @@ mod landfall_rules {
         total_approved: Balance,
     }
 
-    impl LandfallRules {
+    impl DotGasRules {
         /// The caller becomes the owner.
         #[ink(constructor)]
         pub fn new(
@@ -393,11 +393,11 @@ mod landfall_rules {
         }
 
         /// Owner = alice, relayer = bob. Caller is left as bob.
-        fn setup() -> LandfallRules {
+        fn setup() -> DotGasRules {
             let a = accounts();
             test::set_caller::<Env>(a.alice);
             test::set_block_timestamp::<Env>(1_700_000_000_000);
-            let c = LandfallRules::new(a.bob, BUDGET, CAP, COOLDOWN);
+            let c = DotGasRules::new(a.bob, BUDGET, CAP, COOLDOWN);
             test::set_caller::<Env>(a.bob);
             c
         }
@@ -655,7 +655,7 @@ mod landfall_rules {
         fn overflow_is_rejected() {
             let a = accounts();
             test::set_caller::<Env>(a.alice);
-            let mut c = LandfallRules::new(a.bob, Balance::MAX, Balance::MAX, 0);
+            let mut c = DotGasRules::new(a.bob, Balance::MAX, Balance::MAX, 0);
             test::set_caller::<Env>(a.bob);
             assert_eq!(c.approve(oid(1), addr(1), Balance::MAX), Ok(()));
             assert_eq!(c.approve(oid(2), addr(2), 1), Err(Error::Overflow));

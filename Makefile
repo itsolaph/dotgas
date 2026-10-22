@@ -1,8 +1,8 @@
-# Landfall: top-level tasks. Targets run sequentially on purpose (cargo builds are heavy).
+# DotGas: top-level tasks. Targets run sequentially on purpose (cargo builds are heavy).
 .PHONY: all deps build build-evm build-ink build-web test test-evm test-ink test-relayer test-e2e typecheck \
         deploy-base deploy-portaldot deploy-rules relayer web clean
 
-INK_DIR := contracts/ink/landfall_rules
+INK_DIR := contracts/ink/dotgas_rules
 EVM_DIR := contracts/evm
 
 all: build
@@ -22,14 +22,14 @@ build-evm:
 build-ink:
 	cd $(INK_DIR) && cargo contract build --release
 	mkdir -p $(INK_DIR)/artifacts
-	cp $(INK_DIR)/target/ink/landfall_rules.contract $(INK_DIR)/target/ink/landfall_rules.json $(INK_DIR)/target/ink/landfall_rules.wasm $(INK_DIR)/artifacts/
+	cp $(INK_DIR)/target/ink/dotgas_rules.contract $(INK_DIR)/target/ink/dotgas_rules.json $(INK_DIR)/target/ink/dotgas_rules.wasm $(INK_DIR)/artifacts/
 
 build-web:
 	npm --workspace web run build
 
 # ------------------------------------------------------------------ test
 test: test-evm test-ink test-relayer test-e2e
-	@echo "all Landfall test suites passed"
+	@echo "all DotGas test suites passed"
 
 test-evm:
 	cd $(EVM_DIR) && forge test

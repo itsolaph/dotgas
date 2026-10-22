@@ -1,10 +1,10 @@
 [package]
-name = "landfall_rules"
+name = "dotgas_rules"
 version = "0.1.0"
 edition = "2021"
-authors = ["Landfall contributors"]
+authors = ["DotGas contributors"]
 license = "MIT"
-description = "Landfall policy + audit ledger (ink! v5, pallet-contracts on Portaldot)"
+description = "DotGas policy + audit ledger (ink! v5, pallet-contracts on Portaldot)"
 publish = false
 
 [dependencies]

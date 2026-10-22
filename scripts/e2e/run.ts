@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Local end-to-end test for Landfall.
+ * Local end-to-end test for DotGas.
  *
- *   anvil #1  = "Base"       (chain id 31337)  LandfallGate + mock USDC
- *   anvil #2  = "Portaldot"  (chain id 31338)  LandfallDock + FirstSteps, 1 s block time so the relayer's
+ *   anvil #1  = "Base"       (chain id 31337)  DotGasGate + mock USDC
+ *   anvil #2  = "Portaldot"  (chain id 31338)  DotGasDock + FirstSteps, 1 s block time so the relayer's
  *               default PORTALDOT_CONFIRMATIONS=2 is exercised
  *   relayer   = relayer/src/index.ts with RULES_MODE=off (the ink! step needs a Substrate node)
  *
@@ -89,18 +89,18 @@ const firstStepsAbi = parseAbi([
 ]);
 
 const STATUS = { Open: 1, Filled: 2, Refunded: 3, Reserved: 4 };
-const ORDER_TTL = 600; // seconds (LandfallGate minimum is 300)
+const ORDER_TTL = 600; // seconds (DotGasGate minimum is 300)
 const SAFETY_WINDOW = 300;
 
 async function main() {
-  const tmp = mkdtempSync(join(tmpdir(), 'landfall-e2e-'));
+  const tmp = mkdtempSync(join(tmpdir(), 'dotgas-e2e-'));
   const procs: Proc[] = [];
   const logs = { anvilBase: join(tmp, 'anvil-base.log'), anvilPd: join(tmp, 'anvil-portaldot.log'), relayer: join(tmp, 'relayer.log') };
   let relayer: Proc | null = null;
   let success = false;
 
   try {
-    console.log('landfall e2e');
+    console.log('dotgas e2e');
     const [basePort, pdPort, statusPort] = await Promise.all([freePort(), freePort(), freePort()]);
     const baseRpc = `http://localhost:${basePort}`;
     const pdRpc = `http://localhost:${pdPort}`;
@@ -139,8 +139,8 @@ async function main() {
     run('forge', ['script', 'script/DeployPortaldot.s.sol:DeployPortaldot', '--rpc-url', pdRpc, '--broadcast', '--slow'], { cwd: EVM, env: deployEnv });
     const gateDep = JSON.parse(readFileSync(join(EVM, 'deployments/gate-31337.json'), 'utf8'));
     const pdDep = JSON.parse(readFileSync(join(EVM, 'deployments/portaldot-31338.json'), 'utf8'));
-    const gate = gateDep.LandfallGate as Address;
-    const dock = pdDep.LandfallDock as Address;
+    const gate = gateDep.DotGasGate as Address;
+    const dock = pdDep.DotGasDock as Address;
     const firstSteps = pdDep.FirstSteps as Address;
     eq(await pdPub.getBalance({ address: dock }), parseEther('100'), 'dock funded by deploy script');
     ok(`deployed via forge scripts: gate ${gate}, dock ${dock}, firstSteps ${firstSteps}`);
@@ -254,7 +254,7 @@ async function main() {
     ok(`ETH order: Opened -> Reserved -> Filled on Portaldot (${ref.slice(0, 10)}…) -> Claimed on Base`);
 
     const recipientPd = createWalletClient({ chain: pd, transport: http(), account: recipient1 });
-    const signHash = await recipientPd.writeContract({ address: firstSteps, abi: firstStepsAbi, functionName: 'sign', args: ['gm Portaldot, arrived by Landfall'] });
+    const signHash = await recipientPd.writeContract({ address: firstSteps, abi: firstStepsAbi, functionName: 'sign', args: ['gm Portaldot, arrived by DotGas'] });
     eq((await pdPub.waitForTransactionReceipt({ hash: signHash })).status, 'success', 'first tx succeeded');
     eq(await pdPub.readContract({ address: firstSteps, abi: firstStepsAbi, functionName: 'count' }), 1n, 'guestbook count');
     const entry = await pdPub.readContract({ address: firstSteps, abi: firstStepsAbi, functionName: 'entry', args: [0n] });
@@ -385,7 +385,7 @@ async function main() {
     ok('reserved but never filled: refund unlocks after the reservation timeout');
 
     success = true;
-    console.log('landfall e2e: all scenarios passed');
+    console.log('dotgas e2e: all scenarios passed');
   } finally {
     if (relayer) await relayer.stop();
     await Promise.all(procs.map((p) => p.stop()));
@@ -404,7 +404,7 @@ async function main() {
 main().then(
   () => process.exit(0),
   (e) => {
-    console.error(`landfall e2e FAILED: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`dotgas e2e FAILED: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
   },
 );

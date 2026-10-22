@@ -1,12 +1,12 @@
 {
-  "name": "@landfall/relayer",
+  "name": "@dotgas/relayer",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Landfall relayer: watches LandfallGate on Base, approves on ink! rules, fills LandfallDock on Portaldot, claims on Base",
+  "description": "DotGas relayer: watches DotGasGate on Base, approves on ink! rules, fills DotGasDock on Portaldot, claims on Base",
   "bin": {
-    "landfall-relayer": "src/index.ts"
+    "dotgas-relayer": "src/index.ts"
   },
   "scripts": {
     "start": "node --env-file-if-exists=../.env src/index.ts",

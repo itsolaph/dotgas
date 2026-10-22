@@ -16,7 +16,7 @@ contract MockERC20 is ERC20 {
     }
 }
 
-/// @notice Takes a 1% fee on every transfer; used to check LandfallGate rejects under-funded escrows.
+/// @notice Takes a 1% fee on every transfer; used to check DotGasGate rejects under-funded escrows.
 contract FeeOnTransferERC20 is ERC20 {
     constructor() ERC20("Fee Token", "FEE") {}
 

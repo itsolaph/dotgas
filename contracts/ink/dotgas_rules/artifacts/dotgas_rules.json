@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x73d3fb0105e5ba38f4a18db68130c21fa98e09041df7a56c214472e5b2c015fe",
+    "hash": "0xb00a2cd963b8aae657e0084c25ca8250b2d8c323d5c61fe1385224c90922f101",
     "language": "ink! 5.1.1",
     "compiler": "rustc 1.89.0",
     "build_info": {
@@ -14,12 +14,12 @@
     }
   },
   "contract": {
-    "name": "landfall_rules",
+    "name": "dotgas_rules",
     "version": "0.1.0",
     "authors": [
-      "Landfall contributors"
+      "DotGas contributors"
     ],
-    "description": "Landfall policy + audit ledger (ink! v5, pallet-contracts on Portaldot)",
+    "description": "DotGas policy + audit ledger (ink! v5, pallet-contracts on Portaldot)",
     "license": "MIT"
   },
   "image": null,
@@ -171,7 +171,7 @@
         ],
         "docs": [],
         "label": "Approved",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0x296c83735353b8c7b5d7bcc77d74e508c20cf74b246ef9820d1e4608931f2e12"
       },
       {
@@ -212,7 +212,7 @@
         ],
         "docs": [],
         "label": "ConfigUpdated",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0x6e299c9a316183e9feca25e46f5c8cadad39578f4981e6be92e451fdb3419944"
       },
       {
@@ -231,7 +231,7 @@
         ],
         "docs": [],
         "label": "PausedSet",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0x315cad1bf5f8696c24e662db53912abe0ba7f8677b2dd2aed776cf02d75d3246"
       },
       {
@@ -250,7 +250,7 @@
         ],
         "docs": [],
         "label": "RelayerUpdated",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0xcc467a9a88d30e42777c46ac14e010f06f2dfdba5ccba99e51778618cbcf4e8c"
       },
       {
@@ -269,7 +269,7 @@
         ],
         "docs": [],
         "label": "OwnershipTransferStarted",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0xe966fde0f0dcef052bfe921b539ec394c2d095550ad0edf8cf82292552638502"
       },
       {
@@ -288,7 +288,7 @@
         ],
         "docs": [],
         "label": "OwnershipTransferred",
-        "module_path": "landfall_rules::landfall_rules",
+        "module_path": "dotgas_rules::dotgas_rules",
         "signature_topic": "0xc731ae5cbbc0008dc41d849cb57f22cea00491cb59dc0c7f674b5f7b467df29e"
       }
     ],
@@ -767,12 +767,12 @@
                             "array": {
                               "layout": {
                                 "leaf": {
-                                  "key": "0x5a88ad93",
+                                  "key": "0xb51c994b",
                                   "ty": 2
                                 }
                               },
                               "len": 20,
-                              "offset": "0x5a88ad93"
+                              "offset": "0xb51c994b"
                             }
                           },
                           "name": "recipient"
@@ -780,7 +780,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0x5a88ad93",
+                              "key": "0xb51c994b",
                               "ty": 4
                             }
                           },
@@ -789,7 +789,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0x5a88ad93",
+                              "key": "0xb51c994b",
                               "ty": 5
                             }
                           },
@@ -798,7 +798,7 @@
                         {
                           "layout": {
                             "leaf": {
-                              "key": "0x5a88ad93",
+                              "key": "0xb51c994b",
                               "ty": 6
                             }
                           },
@@ -808,7 +808,7 @@
                       "name": "Approval"
                     }
                   },
-                  "root_key": "0x5a88ad93",
+                  "root_key": "0xb51c994b",
                   "ty": 7
                 }
               },
@@ -819,11 +819,11 @@
                 "root": {
                   "layout": {
                     "leaf": {
-                      "key": "0xa59ba0eb",
+                      "key": "0x7f6a1d9e",
                       "ty": 4
                     }
                   },
-                  "root_key": "0xa59ba0eb",
+                  "root_key": "0x7f6a1d9e",
                   "ty": 14
                 }
               },
@@ -834,11 +834,11 @@
                 "root": {
                   "layout": {
                     "leaf": {
-                      "key": "0x3b2e9de6",
+                      "key": "0xb1dc96d4",
                       "ty": 5
                     }
                   },
-                  "root_key": "0x3b2e9de6",
+                  "root_key": "0xb1dc96d4",
                   "ty": 17
                 }
               },
@@ -863,7 +863,7 @@
               "name": "total_approved"
             }
           ],
-          "name": "LandfallRules"
+          "name": "DotGasRules"
         }
       },
       "root_key": "0x00000000",
@@ -1000,8 +1000,8 @@
           }
         },
         "path": [
-          "landfall_rules",
-          "landfall_rules",
+          "dotgas_rules",
+          "dotgas_rules",
           "Approval"
         ]
       }
@@ -1229,80 +1229,80 @@
               {
                 "name": "owner",
                 "type": 0,
-                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1512706915u32, ()>,>>::Type"
+                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4187431846u32, ()>,>>::Type"
               },
               {
                 "name": "pending_owner",
                 "type": 21,
-                "typeName": "<Option<AccountId> as::ink::storage::traits::AutoStorableHint<::\nink::storage::traits::ManualKey<1696828033u32, ()>,>>::Type"
+                "typeName": "<Option<AccountId> as::ink::storage::traits::AutoStorableHint<::\nink::storage::traits::ManualKey<2661275508u32, ()>,>>::Type"
               },
               {
                 "name": "relayer",
                 "type": 0,
-                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1421171550u32, ()>,>>::Type"
+                "typeName": "<AccountId as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4064118761u32, ()>,>>::Type"
               },
               {
                 "name": "paused",
                 "type": 3,
-                "typeName": "<bool as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<3359263764u32, ()>,>>::Type"
+                "typeName": "<bool as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<2966453391u32, ()>,>>::Type"
               },
               {
                 "name": "daily_budget",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2054620026u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1228663162u32, ()>,>>::Type"
               },
               {
                 "name": "recipient_cap",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4176687694u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4036455663u32, ()>,>>::Type"
               },
               {
                 "name": "cooldown_blocks",
                 "type": 5,
-                "typeName": "<BlockNumber as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<500286823u32, ()>,>>::Type"
+                "typeName": "<BlockNumber as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<4202031097u32, ()>,>>::Type"
               },
               {
                 "name": "day",
                 "type": 6,
-                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<1087604336u32, ()>,>>::Type"
+                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<3443929827u32, ()>,>>::Type"
               },
               {
                 "name": "spent_today",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2265237382u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<112505943u32, ()>,>>::Type"
               },
               {
                 "name": "approvals",
                 "type": 7,
-                "typeName": "<Mapping<OrderId, Approval> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<2477623386u32,\n()>,>>::Type"
+                "typeName": "<Mapping<OrderId, Approval> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1268325557u32,\n()>,>>::Type"
               },
               {
                 "name": "received",
                 "type": 14,
-                "typeName": "<Mapping<EvmAddress, Balance> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3953171365u32,\n()>,>>::Type"
+                "typeName": "<Mapping<EvmAddress, Balance> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<2652727935u32,\n()>,>>::Type"
               },
               {
                 "name": "last_approval_block",
                 "type": 17,
-                "typeName": "<Mapping<EvmAddress, BlockNumber> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3869060667u32,\n()>,>>::Type"
+                "typeName": "<Mapping<EvmAddress, BlockNumber> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3566656689u32,\n()>,>>::Type"
               },
               {
                 "name": "approval_count",
                 "type": 6,
-                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<2580055194u32, ()>,>>::Type"
+                "typeName": "<u64 as::ink::storage::traits::AutoStorableHint<::ink::storage\n::traits::ManualKey<33699112u32, ()>,>>::Type"
               },
               {
                 "name": "total_approved",
                 "type": 4,
-                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<1395792u32, ()>,>>::Type"
+                "typeName": "<Balance as::ink::storage::traits::AutoStorableHint<::ink::\nstorage::traits::ManualKey<2846084890u32, ()>,>>::Type"
               }
             ]
           }
         },
         "path": [
-          "landfall_rules",
-          "landfall_rules",
-          "LandfallRules"
+          "dotgas_rules",
+          "dotgas_rules",
+          "DotGasRules"
         ]
       }
     },
@@ -1542,8 +1542,8 @@
           }
         },
         "path": [
-          "landfall_rules",
-          "landfall_rules",
+          "dotgas_rules",
+          "dotgas_rules",
           "Error"
         ]
       }
@@ -1804,8 +1804,8 @@
           }
         },
         "path": [
-          "landfall_rules",
-          "landfall_rules",
+          "dotgas_rules",
+          "dotgas_rules",
           "Stats"
         ]
       }

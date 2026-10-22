@@ -7,7 +7,7 @@ import { InkRules, OffRules, type RulesClient } from './rules.ts';
 import { StateStore } from './state.ts';
 import { startStatusServer } from './status.ts';
 
-const HELP = `landfall-relayer [--dry-run] [--once]
+const HELP = `dotgas-relayer [--dry-run] [--once]
 
   --dry-run   read chains and simulate every step, send nothing, do not write the state file
   --once      run a single scan + process pass and exit
@@ -21,7 +21,7 @@ async function main() {
     return;
   }
   const cfg = loadConfig(process.env, argv);
-  const log = createLogger(cfg.logLevel, { svc: 'landfall-relayer' });
+  const log = createLogger(cfg.logLevel, { svc: 'dotgas-relayer' });
   const src = new ViemSource(cfg);
   const dst = new ViemDest(cfg);
   const rules: RulesClient =

@@ -7,8 +7,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title LandfallGate
-/// @notice Source-chain (Base Sepolia) side of Landfall. A user pays a fixed tier price in ETH or in an
+/// @title DotGasGate
+/// @notice Source-chain (Base Sepolia) side of DotGas. A user pays a fixed tier price in ETH or in an
 ///         ERC20 (e.g. test USDC) and opens an order asking for tPOT gas to be delivered to a Portaldot
 ///         address. A trusted relayer first reserves the order here, then fills it on Portaldot, then claims
 ///         the escrowed payment.
@@ -22,7 +22,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 ///           The relayer may `release` a reservation it will not fill, returning the order to `Open`.
 /// @dev    Pausing only blocks new orders. Reserve, claim and refund keep working so that in-flight orders
 ///         can always be settled one way or the other.
-contract LandfallGate is Ownable2Step, Pausable, ReentrancyGuard {
+contract DotGasGate is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum Status {

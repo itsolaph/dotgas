@@ -4,17 +4,17 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {LandfallGate} from "../src/LandfallGate.sol";
+import {DotGasGate} from "../src/DotGasGate.sol";
 import {MockERC20, FeeOnTransferERC20} from "./mocks/MockERC20.sol";
 
 /// @dev Receiver that tries to re-enter the gate when it gets ETH.
 contract Reenterer {
-    LandfallGate public gate;
+    DotGasGate public gate;
     bytes32 public target;
     bool public attempted;
     bool public reentered;
 
-    constructor(LandfallGate gate_) {
+    constructor(DotGasGate gate_) {
         gate = gate_;
     }
 
@@ -39,8 +39,8 @@ contract RejectEth {
     }
 }
 
-contract LandfallGateTest is Test {
-    LandfallGate gate;
+contract DotGasGateTest is Test {
+    DotGasGate gate;
     MockERC20 usdc;
 
     address owner = makeAddr("owner");
@@ -74,7 +74,7 @@ contract LandfallGateTest is Test {
 
     function setUp() public {
         usdc = new MockERC20();
-        gate = new LandfallGate(owner, relayer, treasury, address(usdc), TTL);
+        gate = new DotGasGate(owner, relayer, treasury, address(usdc), TTL);
         vm.startPrank(owner);
         gate.setTier(1, PRICE_WEI, PRICE_USDC, DST, true);
         gate.setTier(2, 0.002 ether, 4_000_000, 10 ether, true);
@@ -106,17 +106,17 @@ contract LandfallGateTest is Test {
     // ------------------------------------------------------------ constructor / config
 
     function test_constructor_rejectsZeroAddresses() public {
-        vm.expectRevert(LandfallGate.ZeroAddress.selector);
-        new LandfallGate(owner, address(0), treasury, address(usdc), TTL);
-        vm.expectRevert(LandfallGate.ZeroAddress.selector);
-        new LandfallGate(owner, relayer, address(0), address(usdc), TTL);
+        vm.expectRevert(DotGasGate.ZeroAddress.selector);
+        new DotGasGate(owner, address(0), treasury, address(usdc), TTL);
+        vm.expectRevert(DotGasGate.ZeroAddress.selector);
+        new DotGasGate(owner, relayer, address(0), address(usdc), TTL);
     }
 
     function test_constructor_rejectsBadTtl() public {
-        vm.expectRevert(LandfallGate.BadTtl.selector);
-        new LandfallGate(owner, relayer, treasury, address(usdc), 1 minutes);
-        vm.expectRevert(LandfallGate.BadTtl.selector);
-        new LandfallGate(owner, relayer, treasury, address(usdc), 8 days);
+        vm.expectRevert(DotGasGate.BadTtl.selector);
+        new DotGasGate(owner, relayer, treasury, address(usdc), 1 minutes);
+        vm.expectRevert(DotGasGate.BadTtl.selector);
+        new DotGasGate(owner, relayer, treasury, address(usdc), 8 days);
     }
 
     // ------------------------------------------------------------ happy path (ETH)
@@ -138,12 +138,12 @@ contract LandfallGateTest is Test {
         assertEq(id, expectedId);
         assertEq(gate.nonce(), 1);
 
-        LandfallGate.Order memory o = gate.getOrder(id);
+        DotGasGate.Order memory o = gate.getOrder(id);
         assertEq(o.user, alice);
         assertEq(o.recipient, portaldotRecipient);
         assertEq(o.token, address(0));
         assertEq(o.tier, 1);
-        assertEq(uint8(o.status), uint8(LandfallGate.Status.Open));
+        assertEq(uint8(o.status), uint8(DotGasGate.Status.Open));
         assertEq(o.deadline, block.timestamp + TTL);
         assertEq(o.amount, PRICE_WEI);
         assertEq(o.dstAmount, DST);
@@ -159,7 +159,7 @@ contract LandfallGateTest is Test {
         gate.claim(id, FILL_REF);
         assertEq(treasury.balance, PRICE_WEI);
         assertEq(address(gate).balance, 0);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Filled));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Filled));
         assertEq(gate.fillTxRefOf(id), FILL_REF);
     }
 
@@ -171,8 +171,8 @@ contract LandfallGateTest is Test {
         vm.expectEmit(address(gate));
         emit Reserved(id, relayer, uint64(block.timestamp));
         _reserve(id);
-        LandfallGate.Order memory o = gate.getOrder(id);
-        assertEq(uint8(o.status), uint8(LandfallGate.Status.Reserved));
+        DotGasGate.Order memory o = gate.getOrder(id);
+        assertEq(uint8(o.status), uint8(DotGasGate.Status.Reserved));
         assertEq(o.reservedAt, block.timestamp);
         assertEq(address(gate).balance, PRICE_WEI); // escrow untouched
     }
@@ -186,20 +186,20 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL - gate.reserveSafety());
         _reserve(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Reserved));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Reserved));
     }
 
     function test_reserve_afterDeadlineMinusSafety_reverts() public {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL - gate.reserveSafety() + 1);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReserveWindowClosed.selector, id));
         gate.reserve(id);
         vm.warp(block.timestamp + 1 hours); // past the deadline as well
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReserveWindowClosed.selector, id));
         gate.reserve(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Open));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Open));
     }
 
     function test_reserve_respectsConfiguredSafety() public {
@@ -208,7 +208,7 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL - 10 minutes + 1);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReserveWindowClosed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReserveWindowClosed.selector, id));
         gate.reserve(id);
         vm.warp(block.timestamp - 1);
         _reserve(id);
@@ -218,31 +218,31 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         _reserve(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.reserve(id);
     }
 
     function test_reserve_unknownOrClosedOrder_reverts() public {
         bytes32 unknown = keccak256("nope");
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, unknown));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, unknown));
         gate.reserve(unknown);
 
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.reserve(id);
     }
 
     function test_reserve_onlyRelayer() public {
         bytes32 id = _openEth();
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.reserve(id);
         vm.prank(owner);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.reserve(id);
     }
 
@@ -251,12 +251,12 @@ contract LandfallGateTest is Test {
         _reserve(id);
         uint256 reservedAt = block.timestamp;
         vm.warp(block.timestamp + TTL + 1); // original deadline passed
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReservationActive.selector, id));
         gate.refund(id);
         vm.warp(reservedAt + 24 hours); // exactly at the timeout: still blocked
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReservationActive.selector, id));
         gate.refund(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Reserved));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Reserved));
     }
 
     function test_canRefundReserved_afterTimeout() public {
@@ -269,10 +269,10 @@ contract LandfallGateTest is Test {
         vm.prank(bob); // anyone may trigger
         gate.refund(id);
         assertEq(alice.balance, before + PRICE_WEI);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Refunded));
         // the relayer can no longer claim
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -282,7 +282,7 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         _reserve(id);
         vm.warp(block.timestamp + 2 hours);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.ReservationActive.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.ReservationActive.selector, id));
         gate.refund(id);
         vm.warp(block.timestamp + 1);
         gate.refund(id);
@@ -294,7 +294,7 @@ contract LandfallGateTest is Test {
         vm.warp(block.timestamp + TTL + 1 hours);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Filled));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Filled));
         assertEq(treasury.balance, PRICE_WEI);
     }
 
@@ -304,7 +304,7 @@ contract LandfallGateTest is Test {
         vm.warp(block.timestamp + 24 hours + 1);
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.refund(id);
     }
 
@@ -315,29 +315,29 @@ contract LandfallGateTest is Test {
         emit Released(id, relayer);
         vm.prank(relayer);
         gate.release(id);
-        LandfallGate.Order memory o = gate.getOrder(id);
-        assertEq(uint8(o.status), uint8(LandfallGate.Status.Open));
+        DotGasGate.Order memory o = gate.getOrder(id);
+        assertEq(uint8(o.status), uint8(DotGasGate.Status.Open));
         assertEq(o.reservedAt, 0);
         // back to the normal deadline refund, no reservation timeout
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Refunded));
     }
 
     function test_release_onlyRelayer_andOnlyReserved() public {
         bytes32 id = _openEth();
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.release(id);
         _reserve(id);
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.release(id);
         vm.prank(owner);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.release(id);
     }
 
@@ -346,14 +346,14 @@ contract LandfallGateTest is Test {
         gate.setReserveSafety(0);
         assertEq(gate.reserveSafety(), 0);
         gate.setReserveSafety(1 days);
-        vm.expectRevert(LandfallGate.BadReserveSafety.selector);
+        vm.expectRevert(DotGasGate.BadReserveSafety.selector);
         gate.setReserveSafety(1 days + 1);
         gate.setReserveTimeout(1 hours);
         gate.setReserveTimeout(30 days);
         assertEq(gate.reserveTimeout(), 30 days);
-        vm.expectRevert(LandfallGate.BadReserveTimeout.selector);
+        vm.expectRevert(DotGasGate.BadReserveTimeout.selector);
         gate.setReserveTimeout(1 hours - 1);
-        vm.expectRevert(LandfallGate.BadReserveTimeout.selector);
+        vm.expectRevert(DotGasGate.BadReserveTimeout.selector);
         gate.setReserveTimeout(30 days + 1);
         vm.stopPrank();
     }
@@ -369,25 +369,25 @@ contract LandfallGateTest is Test {
 
     function test_open_wrongValue_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_WEI, PRICE_WEI + 1));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.WrongPayment.selector, PRICE_WEI, PRICE_WEI + 1));
         gate.open{value: PRICE_WEI + 1}(portaldotRecipient, 1);
     }
 
     function test_open_inactiveTier_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.TierInactive.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.TierInactive.selector, 9));
         gate.open{value: PRICE_WEI}(portaldotRecipient, 9);
     }
 
     function test_open_ethDisabledForTier_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.WrongPayment.selector, 0, 0));
         gate.open{value: 0}(portaldotRecipient, 3);
     }
 
     function test_open_zeroRecipient_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.ZeroAddress.selector);
+        vm.expectRevert(DotGasGate.ZeroAddress.selector);
         gate.open{value: PRICE_WEI}(address(0), 1);
     }
 
@@ -395,7 +395,7 @@ contract LandfallGateTest is Test {
         vm.prank(owner);
         gate.setTier(1, PRICE_WEI, PRICE_USDC, DST, false);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.TierInactive.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.TierInactive.selector, 1));
         gate.open{value: PRICE_WEI}(portaldotRecipient, 1);
     }
 
@@ -403,7 +403,7 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         vm.prank(owner);
         gate.setTier(1, 1 ether, 1, 1e4, true);
-        LandfallGate.Order memory o = gate.getOrder(id);
+        DotGasGate.Order memory o = gate.getOrder(id);
         assertEq(o.amount, PRICE_WEI);
         assertEq(o.dstAmount, DST);
     }
@@ -419,24 +419,24 @@ contract LandfallGateTest is Test {
         vm.prank(bob); // anyone may trigger
         gate.refund(id);
         assertEq(alice.balance, before + PRICE_WEI);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Refunded));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Refunded));
     }
 
     function test_refund_beforeDeadline_reverts() public {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.DeadlineNotReached.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.DeadlineNotReached.selector, id));
         gate.refund(id);
     }
 
     function test_noClaimFromOpen() public {
         bytes32 id = _openEth();
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
         vm.warp(block.timestamp + TTL + 1);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -445,7 +445,7 @@ contract LandfallGateTest is Test {
         _reserve(id);
         vm.startPrank(relayer);
         gate.claim(id, FILL_REF);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
         vm.stopPrank();
     }
@@ -454,7 +454,7 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.refund(id);
     }
 
@@ -464,7 +464,7 @@ contract LandfallGateTest is Test {
         vm.prank(relayer);
         gate.claim(id, FILL_REF);
         vm.warp(block.timestamp + 30 days);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.refund(id);
     }
 
@@ -473,16 +473,16 @@ contract LandfallGateTest is Test {
         vm.warp(block.timestamp + TTL + 1);
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
     function test_unknownOrder_reverts() public {
         bytes32 id = keccak256("nope");
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotOpen.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotOpen.selector, id));
         gate.refund(id);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.NotReserved.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.NotReserved.selector, id));
         gate.claim(id, FILL_REF);
     }
 
@@ -503,16 +503,16 @@ contract LandfallGateTest is Test {
         vm.prank(address(rej));
         bytes32 id = gate.open{value: PRICE_WEI}(portaldotRecipient, 1);
         vm.warp(block.timestamp + TTL + 1);
-        vm.expectRevert(LandfallGate.TransferFailed.selector);
+        vm.expectRevert(DotGasGate.TransferFailed.selector);
         gate.refund(id);
-        assertEq(uint8(gate.statusOf(id)), uint8(LandfallGate.Status.Open));
+        assertEq(uint8(gate.statusOf(id)), uint8(DotGasGate.Status.Open));
     }
 
     // ------------------------------------------------------------ USDC path
 
     function test_openUSDC_claim() public {
         bytes32 id = _openUsdc();
-        LandfallGate.Order memory o = gate.getOrder(id);
+        DotGasGate.Order memory o = gate.getOrder(id);
         assertEq(o.token, address(usdc));
         assertEq(o.amount, PRICE_USDC);
         assertEq(usdc.balanceOf(address(gate)), PRICE_USDC);
@@ -543,7 +543,7 @@ contract LandfallGateTest is Test {
         vm.prank(owner);
         gate.setPaymentToken(address(0));
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.TokenPaymentDisabled.selector);
+        vm.expectRevert(DotGasGate.TokenPaymentDisabled.selector);
         gate.openUSDC(portaldotRecipient, 1);
     }
 
@@ -551,7 +551,7 @@ contract LandfallGateTest is Test {
         vm.prank(owner);
         gate.setTier(4, PRICE_WEI, 0, DST, true);
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.TokenPaymentDisabled.selector);
+        vm.expectRevert(DotGasGate.TokenPaymentDisabled.selector);
         gate.openUSDC(portaldotRecipient, 4);
     }
 
@@ -563,7 +563,7 @@ contract LandfallGateTest is Test {
         vm.startPrank(alice);
         fot.approve(address(gate), PRICE_USDC);
         vm.expectRevert(
-            abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_USDC, PRICE_USDC - PRICE_USDC / 100)
+            abi.encodeWithSelector(DotGasGate.WrongPayment.selector, PRICE_USDC, PRICE_USDC - PRICE_USDC / 100)
         );
         gate.openUSDC(portaldotRecipient, 1);
         vm.stopPrank();
@@ -620,10 +620,10 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         _reserve(id);
         vm.prank(alice);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
         vm.prank(owner);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
     }
 
@@ -658,7 +658,7 @@ contract LandfallGateTest is Test {
         vm.prank(owner);
         gate.setRelayer(newRelayer);
         vm.prank(relayer);
-        vm.expectRevert(LandfallGate.NotRelayer.selector);
+        vm.expectRevert(DotGasGate.NotRelayer.selector);
         gate.claim(id, FILL_REF);
         vm.prank(newRelayer);
         gate.claim(id, FILL_REF);
@@ -666,7 +666,7 @@ contract LandfallGateTest is Test {
 
     function test_setRelayer_zero_reverts() public {
         vm.prank(owner);
-        vm.expectRevert(LandfallGate.ZeroAddress.selector);
+        vm.expectRevert(DotGasGate.ZeroAddress.selector);
         gate.setRelayer(address(0));
     }
 
@@ -676,15 +676,15 @@ contract LandfallGateTest is Test {
         bytes32 id = _openEth();
         assertEq(gate.getOrder(id).deadline, block.timestamp + 2 hours);
         vm.prank(owner);
-        vm.expectRevert(LandfallGate.BadTtl.selector);
+        vm.expectRevert(DotGasGate.BadTtl.selector);
         gate.setOrderTtl(1);
     }
 
     function test_setTier_dstMustConvertTo14Decimals() public {
         vm.startPrank(owner);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, 5 ether + 1));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.BadDstAmount.selector, 5 ether + 1));
         gate.setTier(5, PRICE_WEI, PRICE_USDC, 5 ether + 1, true);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, 9_999));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.BadDstAmount.selector, 9_999));
         gate.setTier(5, PRICE_WEI, PRICE_USDC, 9_999, true);
         gate.setTier(5, PRICE_WEI, PRICE_USDC, 1e4, true);
         gate.setTier(6, PRICE_WEI, PRICE_USDC, 0, false); // zero (disabled) is a multiple too
@@ -696,7 +696,7 @@ contract LandfallGateTest is Test {
     function testFuzz_setTier_dstDivisibility(uint256 dst) public {
         vm.prank(owner);
         if (dst % 1e4 != 0) {
-            vm.expectRevert(abi.encodeWithSelector(LandfallGate.BadDstAmount.selector, dst));
+            vm.expectRevert(abi.encodeWithSelector(DotGasGate.BadDstAmount.selector, dst));
             gate.setTier(7, PRICE_WEI, 0, dst, true);
         } else {
             gate.setTier(7, PRICE_WEI, 0, dst, true);
@@ -727,7 +727,7 @@ contract LandfallGateTest is Test {
         vm.deal(alice, price);
         vm.prank(alice);
         bytes32 id = gate.open{value: price}(recipient, tier);
-        LandfallGate.Order memory o = gate.getOrder(id);
+        DotGasGate.Order memory o = gate.getOrder(id);
         assertEq(o.recipient, recipient);
         assertEq(o.tier, tier);
         assertEq(o.amount, price);
@@ -746,7 +746,7 @@ contract LandfallGateTest is Test {
         vm.warp(t0 + reserveAfter);
         bool canReserve = reserveAfter + gate.reserveSafety() <= TTL;
         vm.prank(relayer);
-        (bool reserveOk,) = address(gate).call(abi.encodeCall(LandfallGate.reserve, (id)));
+        (bool reserveOk,) = address(gate).call(abi.encodeCall(DotGasGate.reserve, (id)));
         assertEq(reserveOk, canReserve);
 
         vm.warp(t0 + reserveAfter + elapsed);
@@ -755,13 +755,13 @@ contract LandfallGateTest is Test {
         bool refundOk;
         bool claimOk;
         if (tryRefundFirst) {
-            (refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
+            (refundOk,) = address(gate).call(abi.encodeCall(DotGasGate.refund, (id)));
             vm.prank(relayer);
-            (claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
+            (claimOk,) = address(gate).call(abi.encodeCall(DotGasGate.claim, (id, FILL_REF)));
         } else {
             vm.prank(relayer);
-            (claimOk,) = address(gate).call(abi.encodeCall(LandfallGate.claim, (id, FILL_REF)));
-            (refundOk,) = address(gate).call(abi.encodeCall(LandfallGate.refund, (id)));
+            (claimOk,) = address(gate).call(abi.encodeCall(DotGasGate.claim, (id, FILL_REF)));
+            (refundOk,) = address(gate).call(abi.encodeCall(DotGasGate.refund, (id)));
         }
         assertFalse(claimOk && refundOk);
         assertEq(claimOk, reserveOk && !(tryRefundFirst && refundable));
@@ -777,7 +777,7 @@ contract LandfallGateTest is Test {
         value = bound(value, 0, 10 ether);
         vm.assume(value != PRICE_WEI);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(LandfallGate.WrongPayment.selector, PRICE_WEI, value));
+        vm.expectRevert(abi.encodeWithSelector(DotGasGate.WrongPayment.selector, PRICE_WEI, value));
         gate.open{value: value}(portaldotRecipient, 1);
     }
 }

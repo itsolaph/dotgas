@@ -4,14 +4,14 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {LandfallDock} from "../src/LandfallDock.sol";
+import {DotGasDock} from "../src/DotGasDock.sol";
 
 /// @dev Recipient that re-enters `fill` from its receive hook (it is also made the relayer in the test).
 contract ReentrantRecipient {
-    LandfallDock public dock;
+    DotGasDock public dock;
     bool public reentered;
 
-    constructor(LandfallDock dock_) {
+    constructor(DotGasDock dock_) {
         dock = dock_;
     }
 
@@ -27,8 +27,8 @@ contract ReentrantRecipient {
     }
 }
 
-contract LandfallDockTest is Test {
-    LandfallDock dock;
+contract DotGasDockTest is Test {
+    DotGasDock dock;
 
     address owner = makeAddr("owner");
     address relayer = makeAddr("relayer");
@@ -42,7 +42,7 @@ contract LandfallDockTest is Test {
     event Funded(address indexed from, uint256 amount);
 
     function setUp() public {
-        dock = new LandfallDock(owner, relayer, MAX_PER_FILL, RECIPIENT_CAP);
+        dock = new DotGasDock(owner, relayer, MAX_PER_FILL, RECIPIENT_CAP);
         vm.deal(owner, 1000 ether);
         vm.prank(owner);
         (bool ok,) = address(dock).call{value: 100 ether}("");
@@ -90,7 +90,7 @@ contract LandfallDockTest is Test {
         bytes32 id = keccak256("order-1");
         _fill(id, alice, 1 ether);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallDock.AlreadyFilled.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(DotGasDock.AlreadyFilled.selector, id));
         dock.fill(id, payable(bob), 1 ether);
         assertEq(bob.balance, 0);
     }
@@ -98,7 +98,7 @@ contract LandfallDockTest is Test {
     function test_fill_aboveMaxPerFill_reverts() public {
         vm.prank(relayer);
         vm.expectRevert(
-            abi.encodeWithSelector(LandfallDock.AboveMaxPerFill.selector, MAX_PER_FILL + 1, MAX_PER_FILL)
+            abi.encodeWithSelector(DotGasDock.AboveMaxPerFill.selector, MAX_PER_FILL + 1, MAX_PER_FILL)
         );
         dock.fill(keccak256("x"), payable(alice), MAX_PER_FILL + 1);
     }
@@ -109,7 +109,7 @@ contract LandfallDockTest is Test {
         vm.prank(relayer);
         vm.expectRevert(
             abi.encodeWithSelector(
-                LandfallDock.RecipientCapExceeded.selector, alice, RECIPIENT_CAP + 1, RECIPIENT_CAP
+                DotGasDock.RecipientCapExceeded.selector, alice, RECIPIENT_CAP + 1, RECIPIENT_CAP
             )
         );
         dock.fill(keccak256("c"), payable(alice), 1);
@@ -121,25 +121,25 @@ contract LandfallDockTest is Test {
         vm.prank(owner);
         dock.withdraw(payable(owner), 99 ether);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallDock.InsufficientPool.selector, 2 ether, 1 ether));
+        vm.expectRevert(abi.encodeWithSelector(DotGasDock.InsufficientPool.selector, 2 ether, 1 ether));
         dock.fill(keccak256("x"), payable(alice), 2 ether);
     }
 
     function test_fill_zeroAmountOrRecipient_reverts() public {
         vm.startPrank(relayer);
-        vm.expectRevert(LandfallDock.ZeroAmount.selector);
+        vm.expectRevert(DotGasDock.ZeroAmount.selector);
         dock.fill(keccak256("x"), payable(alice), 0);
-        vm.expectRevert(LandfallDock.ZeroAddress.selector);
+        vm.expectRevert(DotGasDock.ZeroAddress.selector);
         dock.fill(keccak256("x"), payable(address(0)), 1 ether);
         vm.stopPrank();
     }
 
     function test_fill_onlyRelayer() public {
         vm.prank(alice);
-        vm.expectRevert(LandfallDock.NotRelayer.selector);
+        vm.expectRevert(DotGasDock.NotRelayer.selector);
         dock.fill(keccak256("x"), payable(alice), 1 ether);
         vm.prank(owner);
-        vm.expectRevert(LandfallDock.NotRelayer.selector);
+        vm.expectRevert(DotGasDock.NotRelayer.selector);
         dock.fill(keccak256("x"), payable(alice), 1 ether);
     }
 
@@ -159,7 +159,7 @@ contract LandfallDockTest is Test {
         vm.prank(owner);
         dock.setRelayer(address(r));
         // Inner fill reverts on the guard -> receive reverts -> outer transfer fails.
-        vm.expectRevert(LandfallDock.TransferFailed.selector);
+        vm.expectRevert(DotGasDock.TransferFailed.selector);
         r.doFill(keccak256("first"), 1 ether);
         assertFalse(dock.filled(keccak256("first")));
         assertFalse(dock.filled(keccak256("second")));
@@ -194,7 +194,7 @@ contract LandfallDockTest is Test {
         vm.prank(owner);
         dock.setRelayer(r2);
         vm.prank(relayer);
-        vm.expectRevert(LandfallDock.NotRelayer.selector);
+        vm.expectRevert(DotGasDock.NotRelayer.selector);
         dock.fill(keccak256("x"), payable(alice), 1 ether);
         vm.prank(r2);
         dock.fill(keccak256("x"), payable(alice), 1 ether);
@@ -206,7 +206,7 @@ contract LandfallDockTest is Test {
         assertEq(dock.maxPerFill(), 1 ether);
         assertEq(dock.recipientCap(), 2 ether);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(LandfallDock.AboveMaxPerFill.selector, 2 ether, 1 ether));
+        vm.expectRevert(abi.encodeWithSelector(DotGasDock.AboveMaxPerFill.selector, 2 ether, 1 ether));
         dock.fill(keccak256("x"), payable(alice), 2 ether);
     }
 
@@ -218,7 +218,7 @@ contract LandfallDockTest is Test {
         amount = bound(amount, 1, 50 ether);
         uint256 before = to.balance;
         vm.prank(relayer);
-        (bool ok,) = address(dock).call(abi.encodeCall(LandfallDock.fill, (keccak256("f"), payable(to), amount)));
+        (bool ok,) = address(dock).call(abi.encodeCall(DotGasDock.fill, (keccak256("f"), payable(to), amount)));
         bool shouldPass = amount <= MAX_PER_FILL; // recipient cap (15) > max per fill (10)
         assertEq(ok, shouldPass);
         assertEq(to.balance - before, shouldPass ? amount : 0);
@@ -233,7 +233,7 @@ contract LandfallDockTest is Test {
             bool expectOk = received + each <= RECIPIENT_CAP;
             vm.prank(relayer);
             (bool ok,) =
-                address(dock).call(abi.encodeCall(LandfallDock.fill, (bytes32(i + 1), payable(alice), each)));
+                address(dock).call(abi.encodeCall(DotGasDock.fill, (bytes32(i + 1), payable(alice), each)));
             assertEq(ok, expectOk);
             if (ok) received += each;
         }
