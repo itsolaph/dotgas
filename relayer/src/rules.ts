@@ -15,26 +15,33 @@ export interface RulesStats {
 
 export type DryRunResult = { ok: true } | { ok: false; error: string };
 
+/** `none`: no approval on chain. `included`: in the best chain, not yet finalized. `finalized`: final. */
+export type ApprovalState = 'none' | 'included' | 'finalized';
+
+/** `finalized`: approve resolves on finalization. `inblock`: on inclusion (chains without usable finality). */
+export type RulesFinality = 'finalized' | 'inblock';
+
 /** The WASM (ink!) policy + audit ledger, or a no-op stand-in when RULES_MODE=off. */
 export interface RulesClient {
   readonly mode: 'on' | 'off';
-  isApproved(orderId: Hex): Promise<boolean>;
+  /** Read from chain state every time; a stored approve tx hash is never trusted on its own. */
+  approvalState(orderId: Hex): Promise<ApprovalState>;
   dryRunApprove(orderId: Hex, recipient: Address, nativeAmount: bigint): Promise<DryRunResult>;
-  approve(orderId: Hex, recipient: Address, nativeAmount: bigint): Promise<{ txHash: string; blockHash: string }>;
+  approve(orderId: Hex, recipient: Address, nativeAmount: bigint): Promise<{ txHash: string; blockHash: string; finalized: boolean }>;
   stats(): Promise<RulesStats | null>;
   close(): Promise<void>;
 }
 
 export class OffRules implements RulesClient {
   readonly mode = 'off' as const;
-  async isApproved() {
-    return false;
+  async approvalState(): Promise<ApprovalState> {
+    return 'none';
   }
   async dryRunApprove(): Promise<DryRunResult> {
     return { ok: true };
   }
   async approve() {
-    return { txHash: 'off', blockHash: 'off' };
+    return { txHash: 'off', blockHash: 'off', finalized: true };
   }
   async stats() {
     return null;
@@ -53,15 +60,27 @@ export class InkRules implements RulesClient {
   private contract: any;
   private pair: any;
   private log: Logger;
+  private finality: RulesFinality;
+  private finalityTimeoutMs: number;
 
-  private constructor(api: any, contract: any, pair: any, log: Logger) {
+  private constructor(api: any, contract: any, pair: any, log: Logger, finality: RulesFinality, finalityTimeoutMs: number) {
     this.api = api;
     this.contract = contract;
     this.pair = pair;
     this.log = log;
+    this.finality = finality;
+    this.finalityTimeoutMs = finalityTimeoutMs;
   }
 
-  static async connect(opts: { wsUrl: string; address: string; metadataPath: string; suri: string; log: Logger }) {
+  static async connect(opts: {
+    wsUrl: string;
+    address: string;
+    metadataPath: string;
+    suri: string;
+    finality: RulesFinality;
+    finalityTimeoutMs: number;
+    log: Logger;
+  }) {
     const [{ ApiPromise, WsProvider }, { ContractPromise }, { Keyring }, { cryptoWaitReady }] = await Promise.all([
       import('@polkadot/api'),
       import('@polkadot/api-contract'),
@@ -73,8 +92,8 @@ export class InkRules implements RulesClient {
     const metadata = JSON.parse(readFileSync(opts.metadataPath, 'utf8'));
     const contract = new ContractPromise(api, metadata, opts.address);
     const pair = new Keyring({ type: 'sr25519', ss58Format: 42 }).addFromUri(opts.suri);
-    opts.log.info('rules connected', { rules: opts.address, signer: pair.address });
-    return new InkRules(api, contract, pair, opts.log);
+    opts.log.info('rules connected', { rules: opts.address, signer: pair.address, finality: opts.finality });
+    return new InkRules(api, contract, pair, opts.log, opts.finality, opts.finalityTimeoutMs);
   }
 
   private queryOpts() {
@@ -94,8 +113,15 @@ export class InkRules implements RulesClient {
     return json?.ok;
   }
 
-  async isApproved(orderId: Hex) {
-    return Boolean(await this.query('isApproved', orderId));
+  /**
+   * The ledger stores the block number of every approval. The best chain extends the finalized chain, so an
+   * approval visible in best state whose block is at or below the finalized head is final.
+   */
+  async approvalState(orderId: Hex): Promise<ApprovalState> {
+    const ap = (await this.query('approval', orderId)) as { block?: unknown } | null | undefined;
+    if (!ap) return 'none';
+    const finalizedHead = await this.api.rpc.chain.getHeader(await this.api.rpc.chain.getFinalizedHead());
+    return BigInt(String(ap.block)) <= finalizedHead.number.toBigInt() ? 'finalized' : 'included';
   }
 
   async dryRunApprove(orderId: Hex, recipient: Address, nativeAmount: bigint): Promise<DryRunResult> {
@@ -121,8 +147,23 @@ export class InkRules implements RulesClient {
       proofSize: (dry.gasRequired.proofSize.toBigInt() * 12n) / 10n,
     });
     const tx = this.contract.tx.approve({ gasLimit, storageDepositLimit: null }, orderId, recipient, nativeAmount);
-    return new Promise<{ txHash: string; blockHash: string }>((resolve, reject) => {
+    const waitFinal = this.finality === 'finalized';
+    return new Promise<{ txHash: string; blockHash: string; finalized: boolean }>((resolve, reject) => {
       let unsub: (() => void) | undefined;
+      let done = false;
+      let inBlock: string | null = null;
+      const finish = (f: () => void) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        unsub?.();
+        f();
+      };
+      // On timeout the relayer retries later and reads the approval state from chain, so nothing is lost.
+      const timer = setTimeout(
+        () => finish(() => reject(new Error(`rules.approve not ${waitFinal ? 'finalized' : 'included'} within ${this.finalityTimeoutMs}ms${inBlock ? ` (in block ${inBlock})` : ''}`))),
+        this.finalityTimeoutMs,
+      );
       tx.signAndSend(this.pair, (res: any) => {
         if (res.dispatchError) {
           let msg = res.dispatchError.toString();
@@ -130,21 +171,29 @@ export class InkRules implements RulesClient {
             const d = this.api.registry.findMetaError(res.dispatchError.asModule);
             msg = `${d.section}.${d.name}`;
           }
-          unsub?.();
-          reject(new Error(`rules.approve failed: ${msg}`));
+          finish(() => reject(new Error(`rules.approve failed: ${msg}`)));
           return;
         }
-        if (res.status.isInBlock || res.status.isFinalized) {
-          const blockHash = (res.status.isInBlock ? res.status.asInBlock : res.status.asFinalized).toHex();
-          this.log.debug('rules approve included', { blockHash });
-          unsub?.();
-          resolve({ txHash: tx.hash.toHex(), blockHash });
+        if (res.status.isDropped || res.status.isInvalid || res.status.isUsurped) {
+          finish(() => reject(new Error(`rules.approve ${res.status.type}`)));
+          return;
+        }
+        if (res.status.isInBlock) {
+          inBlock = res.status.asInBlock.toHex();
+          this.log.debug('rules approve included', { blockHash: inBlock });
+          if (!waitFinal) finish(() => resolve({ txHash: tx.hash.toHex(), blockHash: inBlock!, finalized: false }));
+        }
+        if (res.status.isFinalized) {
+          const blockHash = res.status.asFinalized.toHex();
+          this.log.debug('rules approve finalized', { blockHash });
+          finish(() => resolve({ txHash: tx.hash.toHex(), blockHash, finalized: true }));
         }
       })
         .then((u: () => void) => {
           unsub = u;
+          if (done) u();
         })
-        .catch(reject);
+        .catch((e: unknown) => finish(() => reject(e)));
     });
   }
 

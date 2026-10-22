@@ -3,16 +3,23 @@ import { dirname } from 'node:path';
 
 /**
  * Lifecycle of an order as seen by the relayer.
- *  pending  -> approved -> filled -> claimed      (happy path)
- *  pending  -> rejected   rules or dock policy refused; user refunds after the deadline
- *  pending  -> skipped    deadline too close to fill safely; user refunds after the deadline
- *  pending  -> expired    deadline passed before we got to it
- *  filled   -> unclaimable  filled on Portaldot but the claim window closed (relayer's loss)
- *  any open -> refunded   user refunded on Base
+ *  pending -> reserved -> approved -> filling -> filled -> claimed     (happy path)
+ *     reserved: locked on Base (Gate `Reserved`), refund blocked until the reservation timeout
+ *     approved: ink! rules approval on chain (finalized unless RULES_FINALITY=inblock)
+ *     filling:  Dock fill tx broadcast, hash persisted, not yet verified
+ *     filled:   Dock recorded the fill (receipt + Filled event + Dock.filled); claim after confirmations
+ *  pending  -> rejected     rules or dock policy refused (a reservation is released first)
+ *  pending  -> skipped      deadline too close to reserve safely; user refunds after the deadline
+ *  pending  -> expired      deadline (or reservation timeout) too close before anything was paid out
+ *  pending  -> failed       pre-payout errors exhausted MAX_ATTEMPTS (never once reserved or paid)
+ *  any      -> unclaimable  paid on Portaldot but the Gate order can no longer be claimed (relayer's loss)
+ *  any      -> refunded     user refunded on Base
  */
 export type OrderStatus =
   | 'pending'
+  | 'reserved'
   | 'approved'
+  | 'filling'
   | 'filled'
   | 'claimed'
   | 'rejected'
@@ -32,6 +39,24 @@ export const TERMINAL: ReadonlySet<OrderStatus> = new Set([
   'failed',
 ]);
 
+/** Forward progress through the happy path. A status change to a higher rank resets the retry counter. */
+export const STAGE_RANK: Partial<Record<OrderStatus, number>> = {
+  pending: 0,
+  reserved: 1,
+  approved: 2,
+  filling: 3,
+  filled: 4,
+  claimed: 5,
+};
+
+/**
+ * Past the point of no return for the user's escrow: reserved on Base or a fill tx exists. Errors on such
+ * an order are settlement recovery, retried forever with backoff, never turned into a terminal `failed`.
+ */
+export function isCommitted(rec: OrderRecord): boolean {
+  return Boolean(rec.reserveTx || rec.fillTx) || (STAGE_RANK[rec.status] ?? 0) >= STAGE_RANK.reserved!;
+}
+
 export interface OrderRecord {
   orderId: `0x${string}`;
   user: `0x${string}`;
@@ -45,11 +70,16 @@ export interface OrderRecord {
   openBlock: string;
   status: OrderStatus;
   reason?: string;
+  reserveTx?: `0x${string}`; // persisted as soon as broadcast
+  reservedAt?: number; // unix seconds, from the Gate
+  releaseTx?: `0x${string}`;
   approveTx?: string; // substrate extrinsic hash (or "pre-existing" / "off")
   approveBlock?: string;
-  fillTx?: `0x${string}`;
-  claimTx?: `0x${string}`;
+  fillTx?: `0x${string}`; // persisted as soon as broadcast
+  fillBlock?: string;
+  claimTx?: `0x${string}`; // persisted as soon as broadcast
   attempts: number;
+  nextAttemptAt?: number; // ms epoch; retry backoff
   createdAt: string;
   updatedAt: string;
 }

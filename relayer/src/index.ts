@@ -37,6 +37,7 @@ async function main() {
     dock: cfg.portaldot.dock,
     relayer: src.account.address,
     safetyWindowSec: cfg.safetyWindowSec,
+    gateDeployBlock: cfg.base.deployBlock,
     resumeFrom: state.lastScannedBlock,
     openOrders: state.open().length,
   });
@@ -46,9 +47,13 @@ async function main() {
     {
       safetyWindowSec: cfg.safetyWindowSec,
       confirmations: cfg.base.confirmations,
-      startBlock: cfg.base.startBlock,
+      dstConfirmations: cfg.portaldot.confirmations,
+      startBlock: cfg.base.deployBlock,
       logChunk: cfg.base.logChunk,
       maxAttempts: cfg.maxAttempts,
+      retryBackoffMs: cfg.retryBackoffMs,
+      retryBackoffMaxMs: cfg.retryBackoffMaxMs,
+      requireFinalizedApproval: cfg.rules.finality === 'finalized',
       dryRun: cfg.dryRun,
     },
   );
