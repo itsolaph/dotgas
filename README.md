@@ -6,6 +6,8 @@
 
 Built for Portaldot Hacker House 2026, Multi-Chain & Cross-Chain track.
 
+<img src="docs/screenshot.png" alt="DotGas web app: pick a gas tier, pay on Base Sepolia, sign the FirstSteps guestbook on Portaldot" width="100%">
+
 DotGas is an independent hackathon project, not affiliated with Polkadot or Portaldot.
 
 ---
